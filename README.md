@@ -10,6 +10,6 @@
 
 结构、模型配置、训练配置、数据和运行时变化都可能构成节点。层数、hidden
 size、heads、batch、训练 token、GPU、并行和超参变化允许建点，但必须有
-明确 diff、位置和效果，不能只有“尺寸更大”的标签。详见
+明确 diff、位置和效果。详见
 [FEATURE_ADMISSION_POLICY.md](FEATURE_ADMISSION_POLICY.md)；结构子类型另见
 [STRUCTURAL_FEATURE_POLICY.md](STRUCTURAL_FEATURE_POLICY.md)。
