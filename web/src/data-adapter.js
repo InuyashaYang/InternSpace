@@ -119,7 +119,7 @@ export function normalizeFeatureTree(payload) {
   });
 }
 
-export async function loadFeatureTree(url = "/data/feature-tree.json", fetchImpl = fetch) {
+export async function loadFeatureTree(url = "../data/feature-tree.json", fetchImpl = fetch) {
   let response;
   try {
     response = await fetchImpl(url, { headers: { Accept: "application/json" }, cache: "no-store" });
