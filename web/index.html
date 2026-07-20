@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f3f5f1" />
+    <title>InternSpace · Feature Tree</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell" aria-label="InternSpace Feature Tree">
+      <section class="tree-workspace" aria-label="Feature Tree 画布">
+        <header class="toolbar">
+          <a class="brand" href="./" aria-label="InternSpace 首页">
+            <span class="brand-mark" aria-hidden="true"></span>
+            <span>InternSpace</span>
+          </a>
+          <label class="search-box">
+            <span class="sr-only">搜索 Feature</span>
+            <svg aria-hidden="true" viewBox="0 0 20 20"><path d="m14.2 14.2 3.3 3.3m-1.8-8.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"/></svg>
+            <input id="feature-search" type="search" placeholder="搜索 Feature…" autocomplete="off" />
+            <kbd>/</kbd>
+          </label>
+          <div class="toolbar-actions" aria-label="画布控制">
+            <button type="button" data-action="zoom-out" title="缩小" aria-label="缩小">−</button>
+            <output id="zoom-output" aria-live="polite">100%</output>
+            <button type="button" data-action="zoom-in" title="放大" aria-label="放大">＋</button>
+            <button type="button" class="text-button" data-action="actual-size">1:1</button>
+            <button type="button" class="text-button" data-action="fit">适配</button>
+          </div>
+        </header>
+
+        <div id="search-results" class="search-results" hidden></div>
+        <div id="canvas-scroller" class="canvas-scroller">
+          <svg id="tree-canvas" role="tree" aria-label="Feature 演进树">
+            <defs>
+              <filter id="node-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#203028" flood-opacity=".15" />
+              </filter>
+              <marker id="dependency-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" fill="#88928c" />
+              </marker>
+            </defs>
+            <g id="viewport-layer">
+              <g id="dependency-layer"></g>
+              <g id="edge-layer"></g>
+              <g id="node-layer"></g>
+            </g>
+          </svg>
+          <div id="empty-state" class="empty-state" hidden>
+            <strong>Feature Tree 无法加载</strong>
+            <p id="empty-message"></p>
+            <button type="button" data-action="retry">重新加载</button>
+          </div>
+          <div class="canvas-hint">拖拽空白处平移 · 单击查看详情 · 双击展开 · 滚轮缩放</div>
+        </div>
+      </section>
+
+      <aside id="detail-panel" class="detail-panel" aria-label="Feature 详情">
+        <div class="detail-empty">选择一个 Feature 查看详情</div>
+      </aside>
+    </main>
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
