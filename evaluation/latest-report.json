@@ -68,14 +68,14 @@
       "id": "IS-S02-01",
       "requirement": "web implementation exists",
       "passed": true,
-      "detail": "source_files=9",
+      "detail": "source_files=10",
       "blocking": true
     },
     {
       "id": "IS-S02-02",
       "requirement": "local service is reachable",
       "passed": true,
-      "detail": "HTTP 200, bytes=3118",
+      "detail": "HTTP 200, bytes=5560",
       "blocking": true
     },
     {

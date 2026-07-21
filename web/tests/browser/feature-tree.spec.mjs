@@ -56,6 +56,7 @@ test("root state and adjudicated HLM branch", async ({ page }) => {
   const nodes = page.locator("[data-feature-id]");
   await expect(nodes).toHaveCount(5);
   await expect(page.locator('[data-feature-id="feat-olmo3-standard"]')).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
   const initialIds = await nodes.evaluateAll((items) => items.map((item) => item.dataset.featureId));
   expect(new Set(initialIds)).toEqual(new Set([
     "feat-olmo3-standard",
@@ -71,6 +72,7 @@ test("root state and adjudicated HLM branch", async ({ page }) => {
     await expect(page.locator(`[data-feature-id="${id}"] .node-code-hint`)).not.toBeEmpty();
   }
   await page.screenshot({ path: screenshotPath("root-initial"), fullPage: true });
+  await page.screenshot({ path: screenshotPath("desktop-initial"), fullPage: true });
 
   await page.locator('[data-toggle-id="feat-concept-segmented-topology"]').click();
   await page.locator('[data-toggle-id="feat-concept-hlm-predictor"]').click();
@@ -108,7 +110,7 @@ test("all 11 formal nodes are reachable, non-overlapping and keep the HLM siblin
   const overlapPairs = await nodes.evaluateAll((items) => {
     const boxes = items.map((item) => {
       const matrix = item.transform.baseVal.consolidate().matrix;
-      const rect = item.querySelector(":scope > rect");
+      const rect = item.querySelector(".node-panel");
       return { id: item.dataset.featureId, x: matrix.e, y: matrix.f, width: Number(rect.getAttribute("width")), height: Number(rect.getAttribute("height")) };
     });
     const overlaps = [];
@@ -141,7 +143,9 @@ test("selected detail and auxiliary dependency", async ({ page }) => {
   await expect(page.locator("#detail-panel")).not.toContainText("已验证");
   await expect(page.locator("#detail-panel")).toContainText("分段拓扑骨架");
   await expect(page.locator("[data-auxiliary-edge]")).toHaveCount(1);
+  await expect(page.locator("#detail-panel")).toHaveClass(/is-open/);
   await page.screenshot({ path: screenshotPath("selected-detail-dependency"), fullPage: true });
+  await page.screenshot({ path: screenshotPath("selected-drawer"), fullPage: true });
 });
 
 test("structured locator is pinned, clickable and searchable without credentials", async ({ page }) => {
@@ -313,7 +317,7 @@ test("bilingual display prefers Chinese without changing layout or interactions"
 
   const longTitleNode = page.locator('[data-feature-id="feat-context-window"]');
   await expect(longTitleNode.locator(".node-title")).toHaveText(/…$/);
-  await expect(longTitleNode.locator("rect").first()).toHaveAttribute("height", "68");
+  await expect(longTitleNode.locator(".node-panel")).toHaveAttribute("height", "100");
   await longTitleNode.click();
   await expect(page.locator("#detail-panel h1")).toHaveText("这是一个用于验证紧凑截断规则的超长中文功能标题");
   await expect(page.locator(".detail-title-en")).toHaveText("Longer context window");
@@ -357,4 +361,76 @@ test("search and detail render bilingual values as text, not HTML", async ({ pag
   await expect(page.locator("#detail-panel h1")).toHaveText(feature.title_zh);
   await expect(page.locator("#detail-panel img, #detail-panel script")).toHaveCount(0);
   expect(await page.evaluate(() => window.__webXss)).toBeUndefined();
+});
+
+test("canonical stats and DEMO telemetry remain visibly separated and stoppable", async ({ page }) => {
+  await expect(page.locator(".canonical-stats .stat-source")).toHaveText("CANONICAL");
+  await expect(page.locator("#stat-features")).toHaveText("11");
+  await expect(page.locator("#stat-categories")).toHaveText("1");
+  await expect(page.locator("#stat-code-pinned")).toHaveText("10");
+  await expect(page.locator("#stat-validation")).toContainText("未验证");
+  await expect(page.locator(".demo-stats .stat-source")).toContainText("DEMO · 模拟");
+  await expect(page.locator("html")).toHaveAttribute("data-telemetry-source", "demo");
+
+  const firstTick = Number(await page.locator("html").getAttribute("data-telemetry-tick"));
+  await expect.poll(async () => Number(await page.locator("html").getAttribute("data-telemetry-tick"))).toBeGreaterThan(firstTick);
+  await page.screenshot({ path: screenshotPath("telemetry-running"), fullPage: true });
+
+  await page.locator("#telemetry-toggle").click();
+  await expect(page.locator("#telemetry-toggle")).toHaveAttribute("aria-pressed", "false");
+  const stoppedTick = await page.locator("html").getAttribute("data-telemetry-tick");
+  await page.waitForTimeout(1800);
+  expect(await page.locator("html").getAttribute("data-telemetry-tick")).toBe(stoppedTick);
+  await expect(page.locator("#demo-loss")).toHaveText("—");
+
+  const canonicalText = await page.evaluate(() => {
+    const resource = performance.getEntriesByType("resource").find((entry) => entry.name.includes("feature-tree.json"));
+    return fetch(resource.name).then((response) => response.text());
+  });
+  expect(canonicalText).not.toMatch(/DEMO telemetry|"simulated"|"sparkline"/i);
+});
+
+test("category filter only dims presentation and never changes the tree", async ({ page }) => {
+  const before = await viewportSnapshot(page);
+  const chip = page.locator('#category-filters [data-category="architecture"]');
+  await expect(chip).toHaveAttribute("aria-pressed", "true");
+  await chip.click();
+  await expect(chip).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator('[data-feature-id="feat-concept-self-dd"]')).toHaveClass(/is-category-dimmed/);
+  await expect(page.locator('[data-feature-id="feat-olmo3-standard"]')).not.toHaveClass(/is-category-dimmed/);
+  const after = await viewportSnapshot(page);
+  expect(after.nodeTransforms).toEqual(before.nodeTransforms);
+  expect(after.edgePaths).toEqual(before.edgePaths);
+  await expect(page.locator("[data-feature-id]")).toHaveCount(5);
+});
+
+test("reduced motion freezes DEMO telemetry at the seeded first snapshot", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-ready", "true");
+  const tick = await page.locator("html").getAttribute("data-telemetry-tick");
+  await page.waitForTimeout(1800);
+  expect(await page.locator("html").getAttribute("data-telemetry-tick")).toBe(tick);
+});
+
+test("drawer restores canvas width and mobile uses a non-overflowing bottom overlay", async ({ page }) => {
+  const initialWidth = (await page.locator(".tree-workspace").boundingBox()).width;
+  await page.locator('[data-feature-id="feat-concept-self-dd"]').click();
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "false");
+  expect((await page.locator(".tree-workspace").boundingBox()).width).toBeLessThan(initialWidth);
+  await page.locator("#detail-close").click();
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
+  await expect.poll(async () => (await page.locator(".tree-workspace").boundingBox()).width).toBe(initialWidth);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await page.locator('[data-feature-id="feat-concept-self-dd"]').click();
+  const metrics = await page.evaluate(() => ({
+    pageWidth: document.documentElement.scrollWidth,
+    viewportWidth: document.documentElement.clientWidth,
+    drawerWidth: document.querySelector("#detail-panel").getBoundingClientRect().width,
+  }));
+  expect(metrics.pageWidth).toBe(metrics.viewportWidth);
+  expect(metrics.drawerWidth).toBe(metrics.viewportWidth);
+  await page.screenshot({ path: screenshotPath("mobile-390"), fullPage: true });
 });

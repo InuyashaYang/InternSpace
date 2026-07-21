@@ -3,42 +3,57 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f3f5f1" />
+    <meta name="theme-color" content="#070b14" />
     <title>InternSpace · Feature Tree</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="app-shell" aria-label="InternSpace Feature Tree">
-      <section class="tree-workspace" aria-label="Feature Tree 画布">
-        <header class="toolbar">
-          <a class="brand" href="./" aria-label="InternSpace 首页">
-            <span class="brand-mark" aria-hidden="true"></span>
-            <span>InternSpace</span>
-          </a>
+    <main id="app-shell" class="app-shell" aria-label="InternSpace Feature Tree">
+      <header class="topbar">
+        <a class="brand" href="./" aria-label="InternSpace 首页">
+          <span class="brand-mark" aria-hidden="true">⌘</span>
+          <span class="brand-copy"><strong>InternSpace</strong><small>OLMo-3 → Concept OLMo 结构 Feature 演进</small></span>
+        </a>
+        <div class="search-wrap">
           <label class="search-box">
             <span class="sr-only">搜索 Feature</span>
             <svg aria-hidden="true" viewBox="0 0 20 20"><path d="m14.2 14.2 3.3 3.3m-1.8-8.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"/></svg>
-            <input id="feature-search" type="search" placeholder="搜索 Feature…" autocomplete="off" />
+            <input id="feature-search" type="search" placeholder="搜索标题、symbol、path…" autocomplete="off" />
             <kbd>/</kbd>
           </label>
-          <div class="toolbar-actions" aria-label="画布控制">
-            <button type="button" data-action="zoom-out" title="缩小" aria-label="缩小">−</button>
-            <output id="zoom-output" aria-live="polite">100%</output>
-            <button type="button" data-action="zoom-in" title="放大" aria-label="放大">＋</button>
-            <button type="button" class="text-button" data-action="actual-size">1:1</button>
-            <button type="button" class="text-button" data-action="fit">适配</button>
-          </div>
-        </header>
+          <div id="search-results" class="search-results" hidden></div>
+        </div>
+        <div class="topbar-stats" aria-label="页面统计">
+          <section class="stat-group canonical-stats" aria-label="Canonical 真实统计">
+            <span class="stat-source">CANONICAL</span>
+            <div class="stat"><small>Feature</small><strong id="stat-features">—</strong></div>
+            <div class="stat"><small>Category</small><strong id="stat-categories">—</strong></div>
+            <div class="stat"><small>Code-pinned</small><strong id="stat-code-pinned">—</strong></div>
+            <div class="stat"><small>Validation</small><strong id="stat-validation">—</strong></div>
+          </section>
+          <section class="stat-group demo-stats" aria-label="模拟实时指标">
+            <span class="stat-source demo-label">DEMO · 模拟</span>
+            <div class="stat"><small>Loss</small><strong id="demo-loss">—</strong></div>
+            <div class="stat"><small>Throughput</small><strong id="demo-throughput">—</strong></div>
+            <div class="stat"><small>Active</small><strong id="demo-active">—</strong></div>
+            <button id="telemetry-toggle" type="button" class="telemetry-toggle" aria-pressed="true">模拟实时 开</button>
+          </section>
+        </div>
+      </header>
 
-        <div id="search-results" class="search-results" hidden></div>
+      <section class="tree-workspace" aria-label="Feature Tree 画布">
         <div id="canvas-scroller" class="canvas-scroller">
           <svg id="tree-canvas" role="tree" aria-label="Feature 演进树">
             <defs>
+              <linearGradient id="node-panel-gradient" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#17233a" stop-opacity=".98" />
+                <stop offset="1" stop-color="#0d1526" stop-opacity=".98" />
+              </linearGradient>
               <filter id="node-shadow" x="-50%" y="-50%" width="200%" height="200%">
-                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#203028" flood-opacity=".15" />
+                <feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#000814" flood-opacity=".55" />
               </filter>
               <marker id="dependency-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-                <path d="M0,0 L8,4 L0,8 Z" fill="#88928c" />
+                <path d="M0,0 L8,4 L0,8 Z" fill="#5e829e" />
               </marker>
             </defs>
             <g id="viewport-layer">
@@ -52,12 +67,34 @@
             <p id="empty-message"></p>
             <button type="button" data-action="retry">重新加载</button>
           </div>
-          <div class="canvas-hint">拖拽空白处平移 · 单击查看详情 · 双击展开 · 滚轮缩放</div>
+          <div class="canvas-hint">单根 Feature Tree · 拖拽平移 · 滚轮缩放 · 点击节点查看证据</div>
         </div>
       </section>
 
-      <aside id="detail-panel" class="detail-panel" aria-label="Feature 详情">
-        <div class="detail-empty">选择一个 Feature 查看详情</div>
+      <div class="bottom-legend" aria-label="Category 与关系图例">
+        <div id="category-filters" class="category-filters"></div>
+        <div class="semantic-legend">
+          <span><i class="legend-dot unverified-dot"></i>未验证</span>
+          <span><i class="legend-dot conditional-dot"></i>条件性</span>
+          <span><i class="legend-line structural-line"></i>parent</span>
+          <span><i class="legend-line auxiliary-line"></i>related / depends</span>
+        </div>
+      </div>
+
+      <div class="canvas-controls" aria-label="画布控制">
+        <button type="button" data-action="zoom-out" title="缩小" aria-label="缩小">−</button>
+        <output id="zoom-output" aria-live="polite">100%</output>
+        <button type="button" data-action="zoom-in" title="放大" aria-label="放大">＋</button>
+        <button type="button" data-action="actual-size" title="1:1" aria-label="1:1">1:1</button>
+        <button type="button" data-action="fit" title="适配窗口" aria-label="适配">⊡</button>
+      </div>
+
+      <aside id="detail-panel" class="detail-panel" aria-label="Feature 详情" aria-hidden="true">
+        <div class="drawer-topline">
+          <span>FEATURE EVIDENCE</span>
+          <button id="detail-close" type="button" aria-label="关闭详情">×</button>
+        </div>
+        <div id="detail-content" class="detail-content"><div class="detail-empty">选择一个 Feature 查看详情</div></div>
       </aside>
     </main>
     <script type="module" src="./src/app.js"></script>

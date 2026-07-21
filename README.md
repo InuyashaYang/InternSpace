@@ -1,21 +1,80 @@
 # InternSpace
 
-从 `OLMo-3 标准态` 单一根点向外展开的 Feature 演进树。
+从 `OLMo-3 标准态` 单一根点向外展开的 Feature 演进树。一个可见点就是一个 Feature；
+commit、Python symbol、实验和论文只作为详情或 evidence。
 
-项目定义见 [Project.md](Project.md)。当前仓库刚初始化，三个并行 session 将分别负责：
+- 在线站点：<https://inuyashayang.github.io/InternSpace/>
+- 项目定义：[Project.md](Project.md)
+- Feature 准入：[FEATURE_ADMISSION_POLICY.md](FEATURE_ADMISSION_POLICY.md)
+- 结构 Feature 边界：[STRUCTURAL_FEATURE_POLICY.md](STRUCTURAL_FEATURE_POLICY.md)
+- 贡献流程：[CONTRIBUTION_WORKFLOW.md](CONTRIBUTION_WORKFLOW.md)
 
-1. Feature Tree 数据模型与验证；
-2. 单画布树形页面；
-3. OLMo-3 根来源、增量入口与端到端验收。
+## 本地运行
 
-第一阶段只做小而完整的本地闭环，不迁移 LumiaTree 代码。
+先验证一 Feature 一文件 source 与生成投影：
 
-未来的新节点采用 Git review 驱动：贡献者提交独立 Feature 文件，CI
-验证后由 Pull Request merge 接受，聚合树和静态页面随主分支自动更新。
-详见 [CONTRIBUTION_WORKFLOW.md](CONTRIBUTION_WORKFLOW.md)。
+```bash
+python3 scripts/build_feature_tree.py --check
+python3 scripts/validate_feature_tree.py
+```
 
-结构、模型配置、训练配置、数据和运行时变化都可能构成节点。层数、hidden
-size、heads、batch、训练 token、GPU、并行和超参变化允许建点，但必须有
-明确 diff、位置和效果，不能只有“尺寸更大”的标签。详见
-[FEATURE_ADMISSION_POLICY.md](FEATURE_ADMISSION_POLICY.md)；结构子类型另见
-[STRUCTURAL_FEATURE_POLICY.md](STRUCTURAL_FEATURE_POLICY.md)。
+安装 Web 依赖、运行 Node 测试并启动只读静态服务：
+
+```bash
+npm ci --prefix web
+npm test --prefix web
+npm run serve --prefix web
+```
+
+本地入口为 <http://127.0.0.1:4173/web/>。正式 source of truth 位于 `features/*.json`；
+`data/feature-tree.json` 由 `python3 scripts/build_feature_tree.py` 确定性生成，不手工维护。
+
+## DEMO telemetry
+
+当前或未来页面中明确标记为 **DEMO telemetry** 的 loss、吞吐和训练进度仅用于界面与
+交互可视化模拟：
+
+- 它们不是训练结果；
+- 不进入 Feature `validation`、experiment、artifact 或 evidence；
+- 不允许写回 `features/*.json` 或 `data/feature-tree.json`；
+- 未来真实日志/session 流会通过同一 telemetry provider contract 接入，并明确标识真实
+  provider 与来源。
+
+Pages artifact 构建会扫描 canonical JSON，阻止带 `demo/mock/simulated` 标记的 telemetry、
+loss、throughput 或 progress 字段进入正式数据。
+
+## GitHub Pages 部署
+
+`.github/workflows/pages.yml` 在 `main` merge/push 后自动部署触发 commit：
+
+1. 以 `${{ github.sha }}` checkout 精确 revision，且不持久化 checkout credential；
+2. 运行 canonical builder `--check`、schema/semantic validator 与模型测试；
+3. 运行 Web Node 单元测试和部署 artifact 合同测试；
+4. 构建严格白名单 artifact并检查 project Pages `/InternSpace/` 与本地 `/web/` 路径；
+5. 使用 GitHub 官方 Pages artifact/deploy actions 发布。
+
+发布 artifact 只包含：
+
+```text
+.nojekyll
+index.html
+web/index.html
+web/styles.css
+web/src/*.js
+data/feature-tree.json
+```
+
+不会上传 tests、evaluation、ingest、sources、features、schema、私有工作材料、Web 文档、
+test-results、package metadata 或 `node_modules`。Workflow 不访问私有 `concept_olmo`，不读取
+或写入 PAT；build job 只有 `contents: read`，deploy job 只有 `pages: write` 与
+`id-token: write`。
+
+本地复现 Pages artifact 检查：
+
+```bash
+python3 -m unittest discover -s tests/deploy -p 'test_*.py' -v
+python3 scripts/build_pages_artifact.py --output /tmp/internspace-pages
+```
+
+仓库 Settings → Pages 的 Source 必须选择 **GitHub Actions**。首次切换后可通过 workflow
+手动运行或下一次 `main` push 验证部署；无需更改仓库可见性或提供额外 secret。

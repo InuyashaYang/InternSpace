@@ -1,12 +1,22 @@
 import { FeatureTreeDataError, loadFeatureTree } from "./data-adapter.js";
-import { compactFeatureTitle, featureTitle, matchesFeatureSearch } from "./feature-display.js";
-import { featureValidation, primaryCodeHint } from "./feature-view-model.js";
+import { compactFeatureTitle, featureEnglishSubtitle, featureTitle, matchesFeatureSearch } from "./feature-display.js";
+import { featureValidation, primaryCodeHint, structuredCodeLocators } from "./feature-view-model.js";
 import { ancestorIds, boundsForIds, layoutTree, visibleFeatureIds } from "./tree-layout.js";
 import { renderDetail } from "./detail-view.js";
+import { DemoTelemetryProvider } from "./telemetry.js";
 import { exceedsPanThreshold, translatedViewport } from "./viewport-state.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+const CATEGORY_META = Object.freeze({
+  architecture: { label: "Architecture", color: "#22d3ee" },
+  model_configuration: { label: "Model config", color: "#a855f7" },
+  training_configuration: { label: "Training config", color: "#34d399" },
+  data: { label: "Data", color: "#fb923c" },
+  runtime: { label: "Runtime", color: "#60a5fa" },
+  baseline: { label: "Baseline", color: "#7dd3fc" },
+});
 const elements = {
+  app: document.querySelector("#app-shell"),
   svg: document.querySelector("#tree-canvas"),
   viewport: document.querySelector("#viewport-layer"),
   nodes: document.querySelector("#node-layer"),
@@ -14,11 +24,22 @@ const elements = {
   dependencies: document.querySelector("#dependency-layer"),
   scroller: document.querySelector("#canvas-scroller"),
   detail: document.querySelector("#detail-panel"),
+  detailContent: document.querySelector("#detail-content"),
+  detailClose: document.querySelector("#detail-close"),
   search: document.querySelector("#feature-search"),
   searchResults: document.querySelector("#search-results"),
   zoomOutput: document.querySelector("#zoom-output"),
   empty: document.querySelector("#empty-state"),
   emptyMessage: document.querySelector("#empty-message"),
+  categoryFilters: document.querySelector("#category-filters"),
+  telemetryToggle: document.querySelector("#telemetry-toggle"),
+  statFeatures: document.querySelector("#stat-features"),
+  statCategories: document.querySelector("#stat-categories"),
+  statCodePinned: document.querySelector("#stat-code-pinned"),
+  statValidation: document.querySelector("#stat-validation"),
+  demoLoss: document.querySelector("#demo-loss"),
+  demoThroughput: document.querySelector("#demo-throughput"),
+  demoActive: document.querySelector("#demo-active"),
 };
 
 const state = {
@@ -31,7 +52,17 @@ const state = {
   translateY: 0,
   pan: null,
   suppressClickUntil: 0,
+  drawerOpen: false,
+  enabledCategories: new Set(),
+  telemetryEnabled: true,
+  telemetrySnapshot: null,
+  stopTelemetry: null,
+  telemetryProvider: new DemoTelemetryProvider(),
 };
+
+function featureCategory(feature) {
+  return feature?.kind === "baseline" ? "baseline" : feature?.category ?? "architecture";
+}
 
 function svgElement(name, attributes = {}) {
   const element = document.createElementNS(SVG_NS, name);
@@ -92,15 +123,28 @@ function renderTree() {
     }
   }
 
+  const emphasized = new Set();
+  if (state.drawerOpen && state.selectedId && state.selectedId !== state.tree.rootId) {
+    const selected = state.tree.byId.get(state.selectedId);
+    emphasized.add(state.selectedId);
+    for (const id of ancestorIds(state.tree, state.selectedId)) emphasized.add(id);
+    for (const child of state.tree.childrenById.get(state.selectedId) ?? []) emphasized.add(child.id);
+    for (const id of [...selected.depends_on, ...selected.related_to]) emphasized.add(id);
+  }
+
   for (const id of visible) {
     const feature = state.tree.byId.get(id);
     const displayTitle = featureTitle(feature);
     const validation = featureValidation(feature);
     const codeHint = primaryCodeHint(feature);
+    const category = featureCategory(feature);
+    const categoryMeta = CATEGORY_META[category] ?? CATEGORY_META.architecture;
     const point = state.layout.positions.get(id);
     const children = state.tree.childrenById.get(id) ?? [];
+    const dimmed = emphasized.size && !emphasized.has(id);
+    const categoryDimmed = category !== "baseline" && !state.enabledCategories.has(category);
     const group = svgElement("g", {
-      class: `feature-node validation-${validation.key}${state.selectedId === id ? " is-selected" : ""}`,
+      class: `feature-node category-${category} validation-${validation.key}${state.selectedId === id ? " is-selected" : ""}${dimmed ? " is-dimmed" : ""}${categoryDimmed ? " is-category-dimmed" : ""}`,
       transform: `translate(${point.x} ${point.y})`,
       tabindex: "0",
       role: "treeitem",
@@ -109,44 +153,105 @@ function renderTree() {
       "aria-expanded": children.length ? String(state.expanded.has(id)) : "false",
       "data-feature-id": id,
       "data-validation": validation.key,
+      "data-category": category,
     });
-    group.append(svgElement("rect", { width: state.layout.config.nodeWidth, height: state.layout.config.nodeHeight, rx: 12 }));
-    const title = svgElement("text", { x: 16, y: 20, class: "node-title" });
+    const card = svgElement("g", { class: "node-card" });
+    card.append(svgElement("rect", { class: "node-panel", width: state.layout.config.nodeWidth, height: state.layout.config.nodeHeight, rx: 13 }));
+    card.append(svgElement("rect", { class: "category-accent", width: 4, height: state.layout.config.nodeHeight, rx: 2 }));
+    const title = svgElement("text", { x: 16, y: 19, class: "node-title" });
     title.textContent = compactFeatureTitle(feature);
-    group.append(title);
-    const badgeWidth = Math.min(132, Math.max(48, 20 + validation.label.length * 9));
-    const badge = svgElement("g", { class: "validation-badge", transform: "translate(16 27)" });
-    badge.append(svgElement("rect", { width: badgeWidth, height: 16, rx: 8 }));
-    badge.append(svgElement("circle", { cx: 8, cy: 8, r: 2.5 }));
-    const badgeLabel = svgElement("text", { x: 14, y: 11 });
+    card.append(title);
+    const subtitle = svgElement("text", { x: 16, y: 34, class: "node-subtitle" });
+    subtitle.textContent = featureEnglishSubtitle(feature) || feature.id;
+    card.append(subtitle);
+    const categoryWidth = Math.min(82, 18 + categoryMeta.label.length * 5.2);
+    const categoryBadge = svgElement("g", { class: "node-badge category-badge", transform: "translate(16 42)" });
+    categoryBadge.append(svgElement("rect", { width: categoryWidth, height: 15, rx: 7.5 }));
+    const categoryLabel = svgElement("text", { x: 7, y: 10.5 });
+    categoryLabel.textContent = categoryMeta.label;
+    categoryBadge.append(categoryLabel);
+    card.append(categoryBadge);
+    const validationWidth = Math.min(118, Math.max(45, 18 + validation.label.length * 7));
+    const badge = svgElement("g", { class: "node-badge validation-badge", transform: `translate(${22 + categoryWidth} 42)` });
+    badge.append(svgElement("rect", { width: validationWidth, height: 15, rx: 7.5 }));
+    badge.append(svgElement("circle", { cx: 7, cy: 7.5, r: 2.2 }));
+    const badgeLabel = svgElement("text", { x: 13, y: 10.5 });
     badgeLabel.textContent = validation.label;
     badge.append(badgeLabel);
-    group.append(badge);
+    card.append(badge);
     if (codeHint) {
-      const code = svgElement("text", { x: 16, y: 59, class: "node-code-hint" });
+      const code = svgElement("text", { x: 16, y: 72, class: "node-code-hint" });
       code.textContent = codeHint;
-      group.append(code);
+      card.append(code);
     }
+    const telemetry = svgElement("g", { class: "node-telemetry" });
+    const sim = svgElement("text", { x: 16, y: 90, class: "node-demo-label" });
+    sim.textContent = "SIM";
+    telemetry.append(sim);
+    telemetry.append(svgElement("text", { x: 38, y: 90, class: "node-demo-loss" }));
+    telemetry.append(svgElement("polyline", { class: "node-sparkline" }));
+    telemetry.append(svgElement("rect", { class: "node-progress-track", x: 0, y: 98, width: state.layout.config.nodeWidth, height: 2 }));
+    telemetry.append(svgElement("rect", { class: "node-progress-fill", x: 0, y: 98, width: 0, height: 2 }));
+    card.append(telemetry);
     if (children.length) {
       const toggle = svgElement("g", { class: "node-toggle", transform: `translate(${state.layout.config.nodeWidth - 11} 18)`, "data-toggle-id": id });
       toggle.append(svgElement("circle", { r: 10 }));
       const symbol = svgElement("text", { y: 4 });
       symbol.textContent = state.expanded.has(id) ? "−" : "+";
       toggle.append(symbol);
-      group.append(toggle);
+      card.append(toggle);
     }
+    group.append(card);
     elements.nodes.append(group);
   }
   applyTransform();
+  updateTelemetryDom();
 }
 
 function selectFeature(id, { reveal = false } = {}) {
   if (!state.tree?.byId.has(id)) return;
   if (reveal) for (const ancestor of ancestorIds(state.tree, id)) state.expanded.add(ancestor);
   state.selectedId = id;
-  elements.detail.innerHTML = renderDetail(state.tree.byId.get(id), state.tree);
+  renderDrawer();
+  openDrawer();
   renderTree();
   if (reveal) requestAnimationFrame(fitTree);
+}
+
+function openDrawer() {
+  if (state.drawerOpen) return;
+  state.drawerOpen = true;
+  elements.app.classList.add("drawer-open");
+  elements.detail.classList.add("is-open");
+  elements.detail.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(fitTree);
+}
+
+function closeDrawer() {
+  if (!state.drawerOpen) return;
+  state.drawerOpen = false;
+  elements.app.classList.remove("drawer-open");
+  elements.detail.classList.remove("is-open");
+  elements.detail.setAttribute("aria-hidden", "true");
+  renderTree();
+  requestAnimationFrame(fitTree);
+}
+
+function renderDrawer() {
+  if (!state.tree || !state.selectedId) return;
+  const feature = state.tree.byId.get(state.selectedId);
+  elements.detailContent.innerHTML = renderDetail(feature, state.tree);
+  const demo = document.createElement("section");
+  demo.className = "detail-demo";
+  const label = document.createElement("strong");
+  label.textContent = "DEMO TELEMETRY · 模拟";
+  const values = document.createElement("p");
+  values.dataset.demoValues = "";
+  const notice = document.createElement("p");
+  notice.textContent = "仅用于界面演示，不构成效果证据，也不会写入 canonical 数据。";
+  demo.append(label, values, notice);
+  elements.detailContent.append(demo);
+  updateTelemetryDom();
 }
 
 function toggleFeature(id) {
@@ -195,8 +300,8 @@ function fitTree() {
   if (!state.tree) return;
   const visible = visibleFeatureIds(state.tree, state.expanded);
   const bounds = boundsForIds(state.layout, visible);
-  const width = elements.scroller.clientWidth;
-  const height = elements.scroller.clientHeight;
+  const width = elements.svg.viewBox.baseVal.width;
+  const height = elements.svg.viewBox.baseVal.height;
   const nextScale = Math.min(1.15, Math.max(0.35, Math.min(width / bounds.width, height / bounds.height)));
   state.scale = nextScale;
   state.translateX = (width - bounds.width * nextScale) / 2 - bounds.minX * nextScale;
@@ -239,6 +344,110 @@ function renderSearchResults() {
   elements.searchResults.hidden = false;
 }
 
+function sparklinePoints(values) {
+  if (!values?.length) return "";
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(0.001, max - min);
+  return values.map((value, index) => {
+    const x = 142 + index * (68 / (values.length - 1));
+    const y = 93 - ((value - min) / range) * 11;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+}
+
+function updateTelemetryDom() {
+  const snapshot = state.telemetrySnapshot;
+  elements.app.classList.toggle("telemetry-off", !state.telemetryEnabled);
+  elements.telemetryToggle.setAttribute("aria-pressed", String(state.telemetryEnabled));
+  elements.telemetryToggle.textContent = state.telemetryEnabled ? "模拟实时 开" : "模拟实时 关";
+  if (!snapshot || !state.telemetryEnabled) {
+    elements.demoLoss.textContent = "—";
+    elements.demoThroughput.textContent = "—";
+    elements.demoActive.textContent = "—";
+    return;
+  }
+  elements.demoLoss.textContent = snapshot.aggregate.loss.toFixed(3);
+  elements.demoThroughput.textContent = `${snapshot.aggregate.throughput.toFixed(0)} t/s`;
+  elements.demoActive.textContent = String(snapshot.aggregate.active);
+  document.documentElement.dataset.telemetrySource = snapshot.source;
+  document.documentElement.dataset.telemetryTick = String(snapshot.tick);
+  for (const node of elements.nodes.querySelectorAll("[data-feature-id]")) {
+    const telemetry = snapshot.byFeature.get(node.dataset.featureId);
+    if (!telemetry) continue;
+    node.querySelector(".node-demo-loss").textContent = `loss ${telemetry.loss.toFixed(3)}`;
+    node.querySelector(".node-sparkline").setAttribute("points", sparklinePoints(telemetry.sparkline));
+    node.querySelector(".node-progress-fill").setAttribute("width", String(state.layout.config.nodeWidth * telemetry.progress));
+  }
+  const drawerValues = elements.detailContent.querySelector("[data-demo-values]");
+  const selected = snapshot.byFeature.get(state.selectedId);
+  if (drawerValues && selected) {
+    drawerValues.textContent = `loss ${selected.loss.toFixed(3)} · throughput ${selected.throughput.toFixed(1)} t/s · progress ${(selected.progress * 100).toFixed(1)}%`;
+  }
+}
+
+function startTelemetry() {
+  state.stopTelemetry?.();
+  if (!state.telemetryEnabled || !state.tree) return;
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  state.stopTelemetry = state.telemetryProvider.start(
+    state.tree.features.map((feature) => feature.id),
+    (snapshot) => {
+      state.telemetrySnapshot = snapshot;
+      updateTelemetryDom();
+    },
+    { reducedMotion },
+  );
+}
+
+function toggleTelemetry() {
+  state.telemetryEnabled = !state.telemetryEnabled;
+  if (state.telemetryEnabled) startTelemetry();
+  else {
+    state.stopTelemetry?.();
+    state.stopTelemetry = null;
+    updateTelemetryDom();
+  }
+}
+
+function renderCanonicalStats() {
+  const categories = new Set(state.tree.features.filter((feature) => feature.kind !== "baseline").map(featureCategory));
+  const codePinned = state.tree.features.filter((feature) => structuredCodeLocators(feature).some((locator) => locator.pinnedUrl)).length;
+  const validations = new Map();
+  for (const feature of state.tree.features.filter((item) => item.kind !== "baseline")) {
+    const label = featureValidation(feature).label;
+    validations.set(label, (validations.get(label) ?? 0) + 1);
+  }
+  elements.statFeatures.textContent = String(state.tree.features.length);
+  elements.statCategories.textContent = String(categories.size);
+  elements.statCodePinned.textContent = String(codePinned);
+  elements.statValidation.textContent = [...validations].map(([label, count]) => `${label} ${count}`).join(" / ");
+}
+
+function renderCategoryFilters() {
+  const categories = [...new Set(state.tree.features.filter((feature) => feature.kind !== "baseline").map(featureCategory))];
+  state.enabledCategories = new Set(categories);
+  elements.categoryFilters.replaceChildren();
+  for (const category of categories) {
+    const meta = CATEGORY_META[category] ?? CATEGORY_META.architecture;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "category-chip";
+    button.dataset.category = category;
+    button.style.setProperty("--chip-color", meta.color);
+    button.setAttribute("aria-pressed", "true");
+    button.textContent = meta.label;
+    elements.categoryFilters.append(button);
+  }
+}
+
+function formalDataUrl() {
+  const pageBase = new URL(".", document.baseURI);
+  return pageBase.pathname.endsWith("/web/")
+    ? new URL("../data/feature-tree.json", pageBase)
+    : new URL("data/feature-tree.json", pageBase);
+}
+
 function showError(error) {
   elements.empty.hidden = false;
   elements.emptyMessage.textContent = error instanceof FeatureTreeDataError
@@ -251,12 +460,14 @@ async function initialize() {
   elements.empty.hidden = true;
   elements.svg.classList.remove("is-unavailable");
   try {
-    state.tree = await loadFeatureTree();
+    state.tree = await loadFeatureTree(formalDataUrl());
     state.layout = layoutTree(state.tree);
     state.expanded = new Set([state.tree.rootId]);
     state.selectedId = state.tree.rootId;
     elements.svg.setAttribute("viewBox", `0 0 ${Math.max(state.layout.width, 1200)} ${Math.max(state.layout.height, 720)}`);
-    elements.detail.innerHTML = renderDetail(state.tree.byId.get(state.tree.rootId), state.tree);
+    elements.detailContent.innerHTML = renderDetail(state.tree.byId.get(state.tree.rootId), state.tree);
+    renderCanonicalStats();
+    renderCategoryFilters();
     renderTree();
     fitTree();
     document.documentElement.dataset.ready = "true";
@@ -266,6 +477,7 @@ async function initialize() {
       (count, feature) => count + feature.depends_on.length + feature.related_to.length,
       0,
     ));
+    startTelemetry();
   } catch (error) {
     showError(error);
     document.documentElement.dataset.ready = "error";
@@ -370,6 +582,16 @@ elements.searchResults.addEventListener("click", (event) => {
   selectFeature(result.dataset.searchId, { reveal: true });
   elements.searchResults.hidden = true;
 });
+elements.categoryFilters.addEventListener("click", (event) => {
+  const chip = event.target.closest("[data-category]");
+  if (!chip) return;
+  const category = chip.dataset.category;
+  state.enabledCategories.has(category) ? state.enabledCategories.delete(category) : state.enabledCategories.add(category);
+  chip.setAttribute("aria-pressed", String(state.enabledCategories.has(category)));
+  renderTree();
+});
+elements.telemetryToggle.addEventListener("click", toggleTelemetry);
+elements.detailClose.addEventListener("click", closeDrawer);
 elements.svg.addEventListener("wheel", (event) => {
   event.preventDefault();
   setZoom(state.scale * (event.deltaY > 0 ? 0.9 : 1.1), clientPointToSvg(event.clientX, event.clientY));
@@ -378,6 +600,8 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "/" && document.activeElement !== elements.search) {
     event.preventDefault();
     elements.search.focus();
+  } else if (event.key === "Escape" && state.drawerOpen) {
+    closeDrawer();
   }
 });
 document.addEventListener("click", (event) => {
@@ -388,5 +612,6 @@ document.addEventListener("click", (event) => {
   if (action === "fit") fitTree();
   if (action === "retry") initialize();
 });
-new ResizeObserver(() => state.tree && fitTree()).observe(elements.scroller);
+window.addEventListener("resize", () => state.tree && fitTree());
+window.addEventListener("pagehide", () => state.stopTelemetry?.());
 initialize();

@@ -150,7 +150,7 @@ export function renderDetail(feature, tree) {
     : "";
   return `
     <div class="detail-header">
-      <div class="detail-eyebrow validation-${validation.key}"><span class="status-dot"></span>${escapeHtml(validation.label)}</div>
+      <div class="detail-eyebrow validation-${validation.key}"><span class="status-dot"></span>${escapeHtml(validation.label)}<span class="detail-category">${escapeHtml(feature.category ?? (feature.kind === "baseline" ? "baseline" : "feature"))}</span></div>
       <h1>${escapeHtml(featureTitle(feature))}</h1>
       ${englishSubtitle}
       <code>${escapeHtml(feature.id)}</code>

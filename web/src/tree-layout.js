@@ -2,9 +2,9 @@ export const LAYOUT = Object.freeze({
   originX: 90,
   originY: 70,
   depthGap: 282,
-  rowGap: 94,
+  rowGap: 120,
   nodeWidth: 224,
-  nodeHeight: 68,
+  nodeHeight: 100,
   margin: 72,
 });
 

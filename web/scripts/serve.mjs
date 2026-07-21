@@ -24,7 +24,16 @@ createServer((request, response) => {
     response.end();
     return;
   }
-  const relativePath = normalize(decodeURIComponent(url.pathname)).replace(/^\/+/, "");
+  const decodedPath = normalize(decodeURIComponent(url.pathname)).replace(/^\/+/, "");
+  let relativePath = decodedPath;
+  if (decodedPath === "InternSpace" || decodedPath === "InternSpace/") {
+    relativePath = "web/index.html";
+  } else if (decodedPath.startsWith("InternSpace/")) {
+    const pagesPath = decodedPath.slice("InternSpace/".length);
+    relativePath = pagesPath.startsWith("data/") || pagesPath.startsWith("web/")
+      ? pagesPath
+      : join("web", pagesPath);
+  }
   const requested = resolve(join(repositoryRoot, relativePath));
   if (!requested.startsWith(`${repositoryRoot}/`)) {
     response.writeHead(403).end("Forbidden");
@@ -43,7 +52,11 @@ createServer((request, response) => {
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
   });
-  createReadStream(filePath).pipe(response);
+  const stream = createReadStream(filePath);
+  stream.on("error", () => response.destroy());
+  response.on("close", () => stream.destroy());
+  stream.pipe(response);
 }).listen(port, host, () => {
   console.log(`InternSpace Feature Tree: http://${host}:${port}/web/`);
+  console.log(`GitHub Pages smoke: http://${host}:${port}/InternSpace/`);
 });

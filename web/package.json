@@ -6,6 +6,7 @@
     "serve": "node scripts/serve.mjs",
     "test": "node --test tests/unit/*.test.mjs",
     "test:browser": "playwright test",
+    "test:pages": "playwright test tests/browser/pages.spec.mjs",
     "test:all": "npm test && npm run test:browser"
   },
   "devDependencies": {

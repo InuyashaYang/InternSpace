@@ -16,6 +16,22 @@ The browser suite uses the repository's installed Playwright package and
 system Chromium, starts the existing read-only local server, stores all test
 artifacts under `/tmp`, and never routes a success fixture over the formal data.
 
+Run the independent visual-reference gate with:
+
+```bash
+node web/node_modules/@playwright/test/cli.js test \
+  --config tests/e2e/visual-playwright.config.mjs
+python3 -m evaluation.visual_acceptance
+```
+
+This suite checks dark visual tokens, root-plus-four initial structure,
+category/validation/SIM node semantics, drawer behavior, structural versus
+auxiliary edges, desktop/mobile geometry, pan/zoom/search/keyboard/reduced
+motion, local and GitHub Pages assets, and the deterministic disableable
+`DemoTelemetryProvider`. Screenshots and the raw browser JSON remain under
+`/tmp`; only the generated review and acceptance Markdown are repository
+artifacts.
+
 Run the commit-pinned Concept OLMo source and proposal contracts with:
 
 ```bash
