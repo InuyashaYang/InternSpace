@@ -9,6 +9,12 @@ commit、Python symbol、实验和论文只作为详情或 evidence。
 - 结构 Feature 边界：[STRUCTURAL_FEATURE_POLICY.md](STRUCTURAL_FEATURE_POLICY.md)
 - 贡献流程：[CONTRIBUTION_WORKFLOW.md](CONTRIBUTION_WORKFLOW.md)
 
+未来的新节点采用 Git review 驱动：贡献者提交独立 Feature 文件，CI 验证后由 Pull
+Request merge 接受，聚合树和静态页面随主分支自动更新。
+
+结构、模型配置、训练配置、数据和运行时变化都可能构成节点。层数、hidden size、heads、
+batch、训练 token、GPU、并行和超参变化允许建点，但必须有明确 diff、位置和效果。
+
 ## 本地运行
 
 先验证一 Feature 一文件 source 与生成投影：
@@ -26,22 +32,22 @@ npm test --prefix web
 npm run serve --prefix web
 ```
 
-本地入口为 <http://127.0.0.1:4173/web/>。正式 source of truth 位于 `features/*.json`；
-`data/feature-tree.json` 由 `python3 scripts/build_feature_tree.py` 确定性生成，不手工维护。
+本地入口为 <http://127.0.0.1:4173/web/>。正式 source of truth 位于
+`features/*.json`；`data/feature-tree.json` 由
+`python3 scripts/build_feature_tree.py` 确定性生成，不手工维护。
 
 ## DEMO telemetry
 
-当前或未来页面中明确标记为 **DEMO telemetry** 的 loss、吞吐和训练进度仅用于界面与
-交互可视化模拟：
+页面中明确标记为 **DEMO telemetry** 的 loss、吞吐和训练进度仅用于界面与交互可视化：
 
 - 它们不是训练结果；
 - 不进入 Feature `validation`、experiment、artifact 或 evidence；
 - 不允许写回 `features/*.json` 或 `data/feature-tree.json`；
-- 未来真实日志/session 流会通过同一 telemetry provider contract 接入，并明确标识真实
+- 未来真实日志/session 流通过同一 telemetry provider contract 接入，并明确标识真实
   provider 与来源。
 
-Pages artifact 构建会扫描 canonical JSON，阻止带 `demo/mock/simulated` 标记的 telemetry、
-loss、throughput 或 progress 字段进入正式数据。
+Pages artifact 构建会扫描 canonical JSON，阻止带 `demo/mock/simulated` 标记的
+telemetry、loss、throughput 或 progress 字段进入正式数据。
 
 ## GitHub Pages 部署
 
@@ -50,7 +56,7 @@ loss、throughput 或 progress 字段进入正式数据。
 1. 以 `${{ github.sha }}` checkout 精确 revision，且不持久化 checkout credential；
 2. 运行 canonical builder `--check`、schema/semantic validator 与模型测试；
 3. 运行 Web Node 单元测试和部署 artifact 合同测试；
-4. 构建严格白名单 artifact并检查 project Pages `/InternSpace/` 与本地 `/web/` 路径；
+4. 构建严格白名单 artifact，并检查 project Pages `/InternSpace/` 与本地 `/web/` 路径；
 5. 使用 GitHub 官方 Pages artifact/deploy actions 发布。
 
 发布 artifact 只包含：
@@ -65,9 +71,9 @@ data/feature-tree.json
 ```
 
 不会上传 tests、evaluation、ingest、sources、features、schema、私有工作材料、Web 文档、
-test-results、package metadata 或 `node_modules`。Workflow 不访问私有 `concept_olmo`，不读取
-或写入 PAT；build job 只有 `contents: read`，deploy job 只有 `pages: write` 与
-`id-token: write`。
+test-results、package metadata 或 `node_modules`。Workflow 不访问私有
+`concept_olmo`，不读取或写入 PAT；build job 只有 `contents: read`，deploy job 只有
+`pages: write` 与 `id-token: write`。
 
 本地复现 Pages artifact 检查：
 
@@ -76,5 +82,6 @@ python3 -m unittest discover -s tests/deploy -p 'test_*.py' -v
 python3 scripts/build_pages_artifact.py --output /tmp/internspace-pages
 ```
 
-仓库 Settings → Pages 的 Source 必须选择 **GitHub Actions**。首次切换后可通过 workflow
-手动运行或下一次 `main` push 验证部署；无需更改仓库可见性或提供额外 secret。
+仓库 Settings → Pages 的 Source 必须选择 **GitHub Actions**。切换后可手动运行 workflow
+或等待下一次 `main` push；无需额外 secret。
+
