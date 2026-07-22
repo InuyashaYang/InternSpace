@@ -25,10 +25,10 @@ python3 -m evaluation.visual_acceptance
 ```
 
 This suite checks dark visual tokens, root-plus-four initial structure,
-category/validation/SIM node semantics, drawer behavior, structural versus
-auxiliary edges, desktop/mobile geometry, pan/zoom/search/keyboard/reduced
+category/validation/experiment marker semantics, drawer behavior, structural
+versus auxiliary edges, desktop/mobile geometry, pan/zoom/search/keyboard/reduced
 motion, local and GitHub Pages assets, and the deterministic disableable
-`DemoTelemetryProvider`. Screenshots and the raw browser JSON remain under
+`ExperimentReplayProvider`. Screenshots and the raw browser JSON remain under
 `/tmp`; only the generated review and acceptance Markdown are repository
 artifacts.
 

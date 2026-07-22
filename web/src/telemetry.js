@@ -1,89 +1,88 @@
-function hashString(value, seed) {
-  let hash = seed >>> 0;
-  for (const character of String(value)) {
-    hash ^= character.codePointAt(0);
-    hash = Math.imul(hash, 16777619);
-  }
-  return hash >>> 0;
-}
-
-function unitValue(hash) {
-  let value = hash >>> 0;
-  value ^= value << 13;
-  value ^= value >>> 17;
-  value ^= value << 5;
-  return (value >>> 0) / 0xffffffff;
-}
-
 export class TelemetryProvider {
   snapshot() {
     throw new Error("TelemetryProvider.snapshot must be implemented");
   }
 }
 
-export class DemoTelemetryProvider extends TelemetryProvider {
-  constructor({ seed = 0x1a2b3c4d, intervalMs = 1600 } = {}) {
+function numericLossTrace(experiment) {
+  const trace = experiment?.replay?.loss_trace;
+  if (!Array.isArray(trace)) return [];
+  return trace
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value));
+}
+
+function metricNumber(metrics, key) {
+  const value = metrics?.[key];
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+export class ExperimentReplayProvider extends TelemetryProvider {
+  constructor({ intervalMs = 1600 } = {}) {
     super();
-    this.seed = seed >>> 0;
     this.intervalMs = intervalMs;
   }
 
-  snapshot(featureIds, tick = 0) {
-    const byFeature = new Map();
-    for (const id of featureIds) {
-      const hash = hashString(id, this.seed);
-      const base = unitValue(hash);
-      const phase = base * Math.PI * 2;
-      const activity = 0.35 + unitValue(hash ^ 0x9e3779b9) * 0.6;
-      const progress = Math.min(0.96, 0.18 + unitValue(hash ^ 0x85ebca6b) * 0.66 + tick * 0.0015);
-      const loss = 1.35 + base * 0.62 + Math.sin(phase + tick * 0.22) * 0.035;
-      const throughput = 42 + unitValue(hash ^ 0xc2b2ae35) * 86 + Math.cos(phase + tick * 0.17) * 2.2;
-      const sparkline = Array.from({ length: 18 }, (_, index) => {
-        const trend = loss + (17 - index) * 0.012;
-        return Number((trend + Math.sin(phase + index * 0.72 + tick * 0.18) * 0.025).toFixed(3));
-      });
-      byFeature.set(id, Object.freeze({
-        source: "demo",
-        simulated: true,
-        loss: Number(loss.toFixed(3)),
-        throughput: Number(throughput.toFixed(1)),
-        progress: Number(progress.toFixed(3)),
-        activity: Number(activity.toFixed(3)),
-        sparkline: Object.freeze(sparkline),
+  snapshot(experiments, tick = 0) {
+    const byExperiment = new Map();
+    for (const experiment of experiments) {
+      if (experiment?.cursor_type !== "wandb-replay" || experiment?.replay?.enabled !== true) continue;
+      const trace = numericLossTrace(experiment);
+      if (!trace.length) continue;
+      const cursor = Math.min(Math.max(0, tick), trace.length - 1);
+      byExperiment.set(experiment.id, Object.freeze({
+        source: experiment.replay.source ?? "wandb-replay",
+        replay: true,
+        live: false,
+        loss: trace[cursor],
+        finalLoss: metricNumber(experiment.final_metrics, "loss"),
+        progress: trace.length <= 1 ? 1 : cursor / (trace.length - 1),
+        sparkline: Object.freeze(trace.slice(Math.max(0, cursor - 17), cursor + 1)),
+        coveredFeatureIds: Object.freeze(experiment.covered_feature_ids ?? []),
       }));
     }
-    const values = [...byFeature.values()];
-    const aggregate = Object.freeze({
-      source: "demo",
-      simulated: true,
-      loss: values.length ? Number((values.reduce((sum, item) => sum + item.loss, 0) / values.length).toFixed(3)) : 0,
-      throughput: Number(values.reduce((sum, item) => sum + item.throughput, 0).toFixed(1)),
-      active: values.filter((item) => item.activity > 0.58).length,
+    return Object.freeze({
+      source: "experiment-replay",
+      replay: true,
+      live: false,
+      tick,
+      byExperiment,
+      aggregate: Object.freeze({
+        replaying: byExperiment.size,
+        completed: experiments.filter((experiment) => experiment.status === "completed").length,
+        running: experiments.filter((experiment) => experiment.status === "running").length,
+      }),
     });
-    return Object.freeze({ source: "demo", simulated: true, tick, byFeature, aggregate });
   }
 
-  start(featureIds, onSnapshot, { reducedMotion = false } = {}) {
+  start(experiments, onSnapshot, { reducedMotion = false } = {}) {
     let tick = 0;
-    onSnapshot(this.snapshot(featureIds, tick));
+    onSnapshot(this.snapshot(experiments, tick));
     if (reducedMotion) return () => {};
-    const timer = setInterval(() => onSnapshot(this.snapshot(featureIds, ++tick)), this.intervalMs);
+    const timer = setInterval(() => onSnapshot(this.snapshot(experiments, ++tick)), this.intervalMs);
     return () => clearInterval(timer);
   }
 }
 
 export class StaticArtifactTelemetryProvider extends TelemetryProvider {
-  constructor(snapshotByFeature = new Map()) {
+  constructor(snapshotByExperiment = new Map()) {
     super();
-    this.snapshotByFeature = snapshotByFeature;
+    this.snapshotByExperiment = snapshotByExperiment;
   }
 
-  snapshot(featureIds) {
+  snapshot(experiments) {
+    const byExperiment = new Map();
+    for (const experiment of experiments) {
+      const value = this.snapshotByExperiment.get(experiment.id);
+      if (value) byExperiment.set(experiment.id, value);
+    }
     return Object.freeze({
       source: "artifact",
-      simulated: false,
+      replay: false,
+      live: false,
       tick: 0,
-      byFeature: new Map(featureIds.map((id) => [id, this.snapshotByFeature.get(id)]).filter(([, value]) => value)),
+      byExperiment,
       aggregate: null,
     });
   }

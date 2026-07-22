@@ -28,6 +28,12 @@ contract as the current tree:
 - implementation, experiment and provenance details;
 - auxiliary references that do not affect tree structure.
 
+Experiment records live outside the tree. A single experiment may cover several
+Features, and it declares a cursor type such as `none`, `wandb-final`,
+`wandb-replay` or future `live`. Completed experiments should provide a W&B URL
+and final metrics; replay curves must come from fetched W&B traces and must not
+be described as live training.
+
 ## Pull request contract
 
 The normal contribution adds one Feature. A PR description should explain:
@@ -36,7 +42,7 @@ The normal contribution adds one Feature. A PR description should explain:
 2. why the selected structural parent is correct;
 3. the before/after delta relative to that parent;
 4. the commit-pinned implementation code paths and qualified symbols;
-5. the parent-relative experiment results and effect status;
+5. the parent-relative experiment results, covered Feature IDs and effect status;
 6. unresolved claims and confidence.
 
 A configuration, training, data or runtime change may add a node when it meets

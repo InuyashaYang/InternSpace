@@ -31,12 +31,13 @@
             <div class="stat"><small>Code-pinned</small><strong id="stat-code-pinned">—</strong></div>
             <div class="stat"><small>Validation</small><strong id="stat-validation">—</strong></div>
           </section>
-          <section class="stat-group demo-stats" aria-label="模拟实时指标">
-            <span class="stat-source demo-label">DEMO · 模拟</span>
-            <div class="stat"><small>Loss</small><strong id="demo-loss">—</strong></div>
-            <div class="stat"><small>Throughput</small><strong id="demo-throughput">—</strong></div>
-            <div class="stat"><small>Active</small><strong id="demo-active">—</strong></div>
-            <button id="telemetry-toggle" type="button" class="telemetry-toggle" aria-pressed="true">模拟实时 开</button>
+          <section class="stat-group experiment-stats" aria-label="实验索引与 W&B 回放">
+            <span class="stat-source experiment-label">EXPERIMENTS</span>
+            <div class="stat"><small>Runs</small><strong id="experiment-count">—</strong></div>
+            <div class="stat"><small>Done</small><strong id="experiment-completed">—</strong></div>
+            <div class="stat"><small>Final loss</small><strong id="experiment-final-loss">—</strong></div>
+            <div class="stat"><small>Replay</small><strong id="experiment-replay">—</strong></div>
+            <button id="telemetry-toggle" type="button" class="telemetry-toggle" aria-pressed="true">W&B 回放 开</button>
           </section>
         </div>
       </header>
@@ -67,7 +68,7 @@
             <p id="empty-message"></p>
             <button type="button" data-action="retry">重新加载</button>
           </div>
-          <div class="canvas-hint">单根 Feature Tree · 拖拽平移 · 滚轮缩放 · 点击节点查看证据</div>
+          <div class="canvas-hint">单根 Feature Tree · 实验可覆盖多个 Feature · W&B 回放不是实时训练</div>
         </div>
       </section>
 

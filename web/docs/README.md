@@ -15,7 +15,7 @@
 暗色沉浸式版本的交付截图：
 
 - `desktop-initial.png`：1440×900 单根四主分支首屏；
-- `telemetry-running.png`：seeded DEMO telemetry 运行态；
+- `telemetry-running.png`：实验索引 / W&B replay 控制运行态；
 - `selected-drawer.png`：选中 Feature、关联 dim 与右侧证据 drawer；
 - `mobile-390.png`：390×844 底部 drawer；
 - `reference-layout.png`：本轮实际打开的 `/home/inuyasha/Lumia/index(1).html` 视觉参考留档，仅用于布局和美术对照。

@@ -167,6 +167,10 @@ description: ConceptLM V2.2 OLMo 7B training logic snapshot
 - 支持用鼠标、触控板或触屏拖动画布进行平移；拖动只改变视口，不改变 Feature 的确定性树坐标和父子关系。
 - Feature 节点保持点击选择语义，不提供任意自由拖放改位；实现必须区分 click 与 pan，避免拖动画布后误触节点。
 - 右侧详情栏展示 Feature 的假设、设计、delta、实现、实验、结论和来源。
+- 实验记录不是树节点；一个实验可以覆盖多个 Feature，并在详情中反向显示覆盖关系。
+- 实验光标必须声明类型：`none`、`wandb-final`、`wandb-replay` 或未来的 `live`。
+- 已完成实验展示 W&B 地址、final loss 和 final metrics；没有 W&B 或 artifact 时保持未完成/无结论，不补写假结果。
+- `wandb-replay` 只表示已抓取 loss trace 的回放，不表示训练任务正在实时运行。
 - 每个节点保留原始/英文 `title`，同时提供人工可修订的 `title_zh`；页面默认显示中文标题，英文作为副标题或悬浮信息。重要摘要同样提供中文翻译，机器翻译必须可被 review/merge 修正。
 - 节点颜色只表达少量稳定状态，不为每种关系创造强颜色。
 - 大树必须使用确定性布局；更新数据后同一 Feature 不应无故跳位。

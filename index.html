@@ -21,15 +21,14 @@
   </head>
   <body>
     <main>
-      <span class="label">DEMO telemetry</span>
+      <span class="label">Experiment cursors</span>
       <h1>InternSpace Feature Tree</h1>
       <p>
-        当前或未来界面中标记为 DEMO 的 loss、吞吐与训练进度仅用于可视化模拟，
-        不是训练结果，也不会写入 canonical Feature validation 或 evidence。
+        loss、W&B run 和训练状态属于实验记录；一个实验可以覆盖多个 Feature。
+        已完成实验只展示 W&B 地址与最终指标，没有结果时不会补写假 loss。
       </p>
       <p>
-        真实日志与 session 流将通过同一 telemetry provider contract 接入，并与 DEMO
-        provider 明确区分。
+        页面中的曲线只表示已抓取 W&B trace 的回放，不表示训练正在实时运行。
       </p>
       <a class="action" href="./web/">进入 Feature Tree</a>
       <small>页面将在 6 秒后自动进入；如果没有跳转，请使用上方链接。</small>

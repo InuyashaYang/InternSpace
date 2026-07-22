@@ -8,5 +8,6 @@ test("GitHub Pages /InternSpace/ base path loads modules and canonical data", as
   expect(resources).toContain("/InternSpace/styles.css");
   expect(resources).toContain("/InternSpace/src/app.js");
   expect(resources).toContain("/InternSpace/data/feature-tree.json");
+  expect(resources).toContain("/InternSpace/data/experiments.json");
   await expect(page.locator('[data-feature-id="feat-olmo3-standard"]')).toBeVisible();
 });

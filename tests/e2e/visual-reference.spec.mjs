@@ -61,7 +61,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("html")).toHaveAttribute("data-ready", "true");
 });
 
-test("dark visual tokens, fixed glass header, canonical and DEMO sources stay distinct", async ({ page }) => {
+test("dark visual tokens, fixed glass header, canonical and experiment sources stay distinct", async ({ page }) => {
   expect(cssSource).toMatch(/color-scheme\s*:\s*dark/i);
   expect(cssSource).toMatch(/radial-gradient/i);
   expect(cssSource).toMatch(/(?:repeating-)?linear-gradient|background-size/i);
@@ -89,10 +89,10 @@ test("dark visual tokens, fixed glass header, canonical and DEMO sources stay di
   expect(visual.headerBackdrop).toMatch(/blur/i);
 
   const canonicalStats = page.locator("[data-source='canonical'], [data-canonical-stat], .canonical-stat, .canonical-stats");
-  const demoTelemetry = page.locator("[data-telemetry-source='demo'], [data-demo-telemetry], .demo-telemetry, .demo-stats");
+  const experimentStats = page.locator(".experiment-stats, [data-experiment-stats]");
   expect((await visibleTexts(canonicalStats)).length).toBeGreaterThan(0);
-  expect((await visibleTexts(demoTelemetry)).join(" ")).toMatch(/DEMO|SIM|模拟/i);
-  await expect(page.locator("[data-source='canonical'][data-telemetry-source='demo']")).toHaveCount(0);
+  expect((await visibleTexts(experimentStats)).join(" ")).toMatch(/EXPERIMENTS|W&B|Final loss/i);
+  await expect(page.locator("[data-source='canonical'].experiment-stats")).toHaveCount(0);
 });
 
 test("first viewport is only the root plus four structural branches with no era or lane forest", async ({ page }) => {
@@ -106,7 +106,7 @@ test("first viewport is only the root plus four structural branches with no era 
   expect([...rendered].every((id) => canonical.features.some((feature) => feature.id === id))).toBeTruthy();
 });
 
-test("nodes expose restrained category accent, validation, symbol and explicitly simulated sparkline", async ({ page }) => {
+test("nodes expose restrained category accent, validation, symbol and experiment coverage marker", async ({ page }) => {
   expect(cssSource).toMatch(/category/i);
   const nodes = page.locator("#node-layer [data-feature-id]");
   for (const feature of firstLevel) {
@@ -119,9 +119,8 @@ test("nodes expose restrained category accent, validation, symbol and explicitly
     await expect(symbol).not.toHaveText("");
     const sparkline = node.locator(".node-sparkline, [data-sparkline]");
     await expect(sparkline).toHaveCount(1);
-    const simulated = await sparkline.getAttribute("data-simulated");
-    expect(simulated === "true" || await node.locator(".node-demo-label, [data-sim-label]").count() === 1).toBeTruthy();
-    await expect(node).toContainText(/SIM|模拟/i);
+    await expect(node.locator(".node-exp-label, [data-exp-label]")).toHaveCount(1);
+    await expect(node).toContainText(/EXP|run/i);
   }
 });
 
@@ -246,14 +245,14 @@ test("pan zoom search keyboard and reduced-motion remain operable", async ({ pag
   expect(cssSource).toMatch(/prefers-reduced-motion\s*:\s*reduce/i);
 });
 
-test("local root, web, canonical data, CSS and JS assets all return 200", async ({ request }) => {
-  for (const path of ["/", "/web/", "/data/feature-tree.json", "/web/styles.css", "/web/src/app.js"]) {
+test("local root, web, canonical data, experiment data, CSS and JS assets all return 200", async ({ request }) => {
+  for (const path of ["/", "/web/", "/data/feature-tree.json", "/data/experiments.json", "/web/styles.css", "/web/src/app.js"]) {
     const response = await request.get(path, { failOnStatusCode: false });
     expect(response.status(), path).toBe(200);
   }
 });
 
-test("GitHub Pages root, web, canonical data, CSS and JS assets all return 200", async ({ playwright }, testInfo) => {
+test("GitHub Pages root, web, canonical data, experiment data, CSS and JS assets all return 200", async ({ playwright }, testInfo) => {
   const context = await playwright.request.newContext({
     baseURL: "https://inuyashayang.github.io",
     ignoreHTTPSErrors: false,
@@ -264,6 +263,7 @@ test("GitHub Pages root, web, canonical data, CSS and JS assets all return 200",
       "/InternSpace/",
       "/InternSpace/web/",
       "/InternSpace/data/feature-tree.json",
+      "/InternSpace/data/experiments.json",
       "/InternSpace/web/styles.css",
       "/InternSpace/web/src/app.js",
     ]) {
@@ -279,33 +279,42 @@ test("GitHub Pages root, web, canonical data, CSS and JS assets all return 200",
   for (const result of results) expect(result.status, result.path).toBe(200);
 });
 
-test("DemoTelemetryProvider is deterministic, disableable and never mutates canonical research evidence", async ({ page }) => {
-  const telemetryEntry = Object.entries(srcSources).find(([, source]) => /export\s+class\s+DemoTelemetryProvider/.test(source));
-  expect(telemetryEntry, "web/src must export DemoTelemetryProvider").toBeTruthy();
+test("ExperimentReplayProvider is deterministic, disableable and never mutates canonical research evidence", async ({ page }) => {
+  const telemetryEntry = Object.entries(srcSources).find(([, source]) => /export\s+class\s+ExperimentReplayProvider/.test(source));
+  expect(telemetryEntry, "web/src must export ExperimentReplayProvider").toBeTruthy();
   const [fileName, telemetrySource] = telemetryEntry;
   expect(telemetrySource).not.toMatch(/Math\.random\s*\(/);
 
   const providerContract = await page.evaluate(async (moduleUrl) => {
     const module = await import(moduleUrl);
-    const Provider = module.DemoTelemetryProvider;
-    if (typeof Provider !== "function") return { error: "missing named DemoTelemetryProvider export" };
+    const Provider = module.ExperimentReplayProvider;
+    if (typeof Provider !== "function") return { error: "missing named ExperimentReplayProvider export" };
+    const experiment = {
+      id: "exp-visual",
+      status: "running",
+      cursor_type: "wandb-replay",
+      covered_feature_ids: ["feat-concept-self-dd"],
+      final_metrics: { loss: 1.11 },
+      replay: { enabled: true, source: "wandb", loss_trace: [1.5, 1.4, 1.3] },
+    };
     const normalize = (snapshot) => ({
       source: snapshot?.source,
-      simulated: snapshot?.simulated,
+      replay: snapshot?.replay,
+      live: snapshot?.live,
       tick: snapshot?.tick,
       aggregate: snapshot?.aggregate,
-      byFeature: snapshot?.byFeature instanceof Map ? [...snapshot.byFeature.entries()] : snapshot?.byFeature,
+      byExperiment: snapshot?.byExperiment instanceof Map ? [...snapshot.byExperiment.entries()] : snapshot?.byExperiment,
     });
     const invoke = async (provider) => {
       const method = provider.snapshot ?? provider.sample ?? provider.getSnapshot ?? provider.get;
       if (typeof method !== "function") return { error: "missing snapshot/sample/getSnapshot/get method" };
-      return normalize(await method.call(provider, ["feat-concept-self-dd"], 7));
+      return normalize(await method.call(provider, [experiment], 2));
     };
-    const first = await invoke(new Provider({ seed: "visual-gate", enabled: true }));
-    const second = await invoke(new Provider({ seed: "visual-gate", enabled: true }));
+    const first = await invoke(new Provider());
+    const second = await invoke(new Provider());
     let callbackCount = 0;
-    const stop = new Provider({ seed: "visual-gate" }).start(
-      ["feat-concept-self-dd"],
+    const stop = new Provider().start(
+      [experiment],
       () => { callbackCount += 1; },
       { reducedMotion: true },
     );
@@ -314,7 +323,8 @@ test("DemoTelemetryProvider is deterministic, disableable and never mutates cano
   }, `/web/src/${fileName}`);
   expect(providerContract.error).toBeUndefined();
   expect(providerContract.first).toEqual(providerContract.second);
-  expect(providerContract.first?.simulated).toBe(true);
+  expect(providerContract.first?.replay).toBe(true);
+  expect(providerContract.first?.live).toBe(false);
   expect(providerContract.stopType).toBe("function");
   expect(providerContract.callbackCount).toBe(1);
 

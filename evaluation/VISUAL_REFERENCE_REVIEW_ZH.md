@@ -14,7 +14,7 @@
 
 参考页可以提供暗色研究画布的视觉语言，但不能提供 InternSpace 的信息架构或事实模型。InternSpace 必须继续是一棵由 `parent_id` 决定的单根 Feature Tree；参考页中的年代列、研究 lane、动态训练状态和随机指标不得进入正式页面语义。
 
-视觉借鉴的核心原则是：**层级和交互可以借鉴，研究事实不能模拟成真。** 任何 loss、吞吐、训练进度、active 状态或 sparkline 只能来自统一的 `DemoTelemetryProvider`，必须持续显示 `DEMO` / `SIM` / `模拟` 标识，并与 canonical Feature、experiment、evidence 和 provenance 完全隔离。
+视觉借鉴的核心原则是：**层级和交互可以借鉴，研究事实不能模拟成真。** loss、W&B run、训练状态和曲线属于实验记录，不属于单个 Feature；曲线只能来自已抓取的 W&B trace 回放，并必须标为 `W&B replay`。
 
 ## 可直接借鉴
 
@@ -31,25 +31,25 @@
 
 ## 有条件借鉴
 
-以下元素只有满足统一模拟数据边界时才允许出现：
+以下元素只有满足实验索引边界时才允许出现：
 
 | 元素 | 允许条件 | 必须拒绝的用法 |
 |---|---|---|
 | category 色 | 使用低饱和 accent，主要帮助扫视；validation 仍由独立 badge 表达 | 用高饱和彩虹色把页面变成 lane 分类森林 |
-| 跳动 loss | 由确定性、可复现、可关闭的 `DemoTelemetryProvider` 产生，并显示 `SIM` | 未标注地显示为模型真实 loss |
-| 吞吐 | 只作为 UI demo，标明单位与模拟来源，不写入 Feature 数据 | 写入 experiment/evidence 或暗示来自实际训练日志 |
-| 进度 | 只表达演示动画，不映射 Feature `status` 或 validation status | 把模拟进度条当作研发完成度或训练完成度 |
-| active 状态 | 仅在明确的 `DEMO telemetry` 区域使用 | 把闪烁圆点解释为真实任务/集群在线状态 |
-| sparkline | 轻量、低对比，节点内持续带 `SIM` 标记；reduced-motion 下停止动画 | 无来源标识、随机刷新、与研究结论混排 |
+| loss 曲线 | 只能来自已抓取 W&B trace 的 `wandb-replay`，并可关闭 | 未标注地显示为模型真实实时 loss |
+| final loss | 只从完成实验的 W&B/artifact final metrics 读取 | 为没有结果的实验补写假 loss |
+| 进度 | 只表达回放游标位置，不映射 Feature `status` 或 validation status | 把回放进度条当作研发完成度或训练完成度 |
+| active 状态 | 不再使用；实验状态由 `planned/running/completed/...` 文本表达 | 把闪烁圆点解释为真实任务/集群在线状态 |
+| sparkline | 轻量、低对比，节点内显示为实验覆盖 / W&B replay | 无来源标识、随机刷新、与研究结论混排 |
 
-`DemoTelemetryProvider` 的验收契约：
+`ExperimentReplayProvider` 的验收契约：
 
-1. 相同 seed、Feature ID 和 tick 得到相同输出；刷新页面不能产生不可追溯随机事实。
-2. 可通过一个显式开关关闭；关闭后不显示 loss、吞吐、进度、active 或 sparkline。
-3. 输出对象必须带 `simulated: true` 或等价的机器可读标记。
-4. 页面上的可见区域必须持续标注 `DEMO` / `SIM` / `模拟`，不能只在帮助文档中说明。
-5. provider 不写入、不回传、不修改 `data/feature-tree.json`。
-6. 模拟字段不得进入 Feature 的 `experiments`、`validation`、`evidence` 或 `provenance`。
+1. 输入对象是实验记录，不是 Feature ID。
+2. 一个实验可以覆盖多个 Feature；节点只显示覆盖关系和回放摘要。
+3. 相同实验 trace 和 tick 得到相同输出；刷新页面不能产生不可追溯随机事实。
+4. 可通过显式开关关闭；关闭后不推进 replay 游标。
+5. provider 不写入、不回传、不修改 `features/*.json` 或 `data/feature-tree.json`。
+6. 没有 W&B URL、final metrics 或 trace 的实验保持 planned/unverified，不补假指标。
 
 ## 必须拒绝
 
@@ -57,8 +57,8 @@
 |---|---|
 | 年代列 / era band | InternSpace 的横向位置表达确定性 Feature 深度，不表达年份时间轴 |
 | lane 森林 | 项目只有一个结构根和一棵单父树，category 不是第二套结构 |
-| 未标注的假指标 | 会破坏研究真实性，用户无法区分 canonical 与 UI demo |
-| 把模拟值宣称成实验结果 | 违反 evidence 规则；代码存在、动画变化和 UI demo 都不是效果证据 |
+| 未标注的假指标 | 会破坏研究真实性，用户无法区分 canonical、实验索引与回放 |
+| 把回放值宣称成实时训练 | 违反 evidence 规则；trace 回放不是任务在线状态 |
 | 高饱和彩虹分类 | 使 category 压过 parent/validation/selected 语义，并降低中文长标题可读性 |
 | 随机 `Math.random()` 实时循环 | 不可复现、不可审计，也无法证明不会污染正式数据 |
 | “训练中”闪烁等同 Feature 状态 | Feature status、validation status 与外部任务运行态是不同概念 |
@@ -71,7 +71,7 @@
 - 中文标题/摘要优先；英文标题作为低干扰副标题或审计信息。
 - 每个节点详情必须保留 parent-relative delta、代码 locator、validation/effect 和 provenance。
 - 主边只表示 `parent_id`；`depends_on` / `related_to` 使用明显不同的辅助边样式，且不改变树布局。
-- 布局、初始展开状态、搜索揭示路径和 telemetry 都必须确定性可复现。
+- 布局、初始展开状态、搜索揭示路径和实验 replay 都必须确定性可复现。
 - 失败、mixed、conditional 与 unverified 必须诚实显示，不能用动画包装成成功。
 
 ## 参考页与当前 InternSpace 的差异
@@ -82,17 +82,17 @@
 | 画布 | 网格 + pan/zoom | 点阵 + pan/zoom | 暗色网格 + 确定性 Feature Tree |
 | 顶栏 | 固定玻璃 header | 画布内绝对定位工具栏 | 固定玻璃 header，来源区分持续可见 |
 | 结构 | 年代列 + 多 lane 森林 | 单根 Feature Tree | 保留单根与四条首层分支 |
-| 指标 | 随机 loss/吞吐/进度 | 当前无 demo telemetry | 仅允许显著标注、可复现、可关闭的 SIM telemetry |
+| 指标 | 随机 loss/吞吐/进度 | 实验索引 + W&B replay | 完成实验展示 W&B/final loss；曲线只做 trace 回放 |
 | 详情 | 右侧抽屉，点击打开 | 常驻右侧详情栏，默认显示 root | 默认关闭抽屉，关闭恢复完整画布 |
-| 节点 | 高饱和 lane accent | 浅色 validation badge + symbol | 低饱和 category accent + validation badge + symbol + SIM sparkline |
+| 节点 | 高饱和 lane accent | 浅色 validation badge + symbol | 低饱和 category accent + validation badge + symbol + 实验覆盖 marker |
 
 ## 风险
 
 ### 真实性风险
 
 - 最大风险是把参考页的随机训练指标直接移植到研究页面。
-- “DEMO”只在某个角落出现一次仍不充分；每个指标区域和 sparkline 都需要可见 `SIM` 标识。
-- canonical 统计与 demo telemetry 必须有不同的 DOM/source 标记，便于自动验收和辅助技术识别。
+- W&B replay 必须持续表明它是 trace 回放，不是实时训练。
+- canonical 统计与 experiment cursor 必须有不同的 DOM/source 标记，便于自动验收和辅助技术识别。
 
 ### 可读性风险
 
