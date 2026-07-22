@@ -8,6 +8,14 @@ export class FeatureTreeDataError extends Error {
   }
 }
 
+export class ExperimentIndexDataError extends Error {
+  constructor(message, details = []) {
+    super(message);
+    this.name = "ExperimentIndexDataError";
+    this.details = details;
+  }
+}
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -132,5 +140,81 @@ export async function loadFeatureTree(url = "../data/feature-tree.json", fetchIm
   } catch (error) {
     if (error instanceof FeatureTreeDataError) throw error;
     throw new FeatureTreeDataError(`Feature Tree JSON 无法解析: ${error.message}`);
+  }
+}
+
+const EXPERIMENT_STATUSES = new Set(["planned", "running", "completed", "failed", "inconclusive", "archived"]);
+const EXPERIMENT_CURSOR_TYPES = new Set(["none", "wandb-final", "wandb-replay", "live"]);
+
+function normalizeExperiment(experiment) {
+  const covered = asArray(experiment?.covered_feature_ids).map(cleanReference).filter(Boolean);
+  const primary = asArray(experiment?.primary_feature_ids).map(cleanReference).filter(Boolean);
+  return Object.freeze({
+    ...experiment,
+    id: String(experiment?.id ?? ""),
+    title: String(experiment?.title ?? experiment?.id ?? "未命名实验"),
+    title_zh: String(experiment?.title_zh ?? ""),
+    type: String(experiment?.type ?? "training"),
+    status: String(experiment?.status ?? "planned"),
+    cursor_type: String(experiment?.cursor_type ?? "none"),
+    covered_feature_ids: Object.freeze(covered),
+    primary_feature_ids: Object.freeze(primary.length ? primary : covered),
+    summary: String(experiment?.summary ?? ""),
+    summary_zh: String(experiment?.summary_zh ?? ""),
+    wandb_url: experiment?.wandb_url ?? null,
+    final_metrics: experiment?.final_metrics && typeof experiment.final_metrics === "object" ? experiment.final_metrics : {},
+    replay: experiment?.replay && typeof experiment.replay === "object" ? experiment.replay : {},
+    evidence: asArray(experiment?.evidence),
+  });
+}
+
+export function normalizeExperimentIndex(payload, tree = null) {
+  const rawExperiments = Array.isArray(payload)
+    ? payload
+    : payload?.experiments ?? payload?.experiment_index?.experiments ?? [];
+  if (!Array.isArray(rawExperiments)) {
+    throw new ExperimentIndexDataError("数据中缺少 experiments 数组");
+  }
+
+  const experiments = rawExperiments.map(normalizeExperiment);
+  const errors = [];
+  const byId = new Map();
+  const byFeatureId = new Map();
+  for (const experiment of experiments) {
+    if (!experiment.id) errors.push("存在缺少 id 的实验");
+    else if (byId.has(experiment.id)) errors.push(`重复的实验 id: ${experiment.id}`);
+    else byId.set(experiment.id, experiment);
+    if (!EXPERIMENT_STATUSES.has(experiment.status)) errors.push(`${experiment.id} 的 status 无效: ${experiment.status}`);
+    if (!EXPERIMENT_CURSOR_TYPES.has(experiment.cursor_type)) errors.push(`${experiment.id} 的 cursor_type 无效: ${experiment.cursor_type}`);
+    if (!experiment.covered_feature_ids.length) errors.push(`${experiment.id} 至少要覆盖一个 Feature`);
+    for (const featureId of experiment.covered_feature_ids) {
+      if (tree?.byId && !tree.byId.has(featureId)) errors.push(`${experiment.id} 覆盖的 Feature 不存在: ${featureId}`);
+      if (!byFeatureId.has(featureId)) byFeatureId.set(featureId, []);
+      byFeatureId.get(featureId).push(experiment);
+    }
+  }
+
+  if (errors.length) throw new ExperimentIndexDataError("Experiment Index 数据无效", errors);
+  return Object.freeze({
+    experiments: Object.freeze(experiments),
+    byId,
+    byFeatureId,
+    metadata: Array.isArray(payload) ? {} : payload.metadata ?? payload.meta ?? {},
+  });
+}
+
+export async function loadExperimentIndex(url = "../data/experiments.json", tree = null, fetchImpl = fetch) {
+  let response;
+  try {
+    response = await fetchImpl(url, { headers: { Accept: "application/json" }, cache: "no-store" });
+  } catch (error) {
+    throw new ExperimentIndexDataError(`无法连接 Experiment Index 数据源: ${error.message}`);
+  }
+  if (!response.ok) throw new ExperimentIndexDataError(`Experiment Index 数据源返回 ${response.status}`);
+  try {
+    return normalizeExperimentIndex(await response.json(), tree);
+  } catch (error) {
+    if (error instanceof ExperimentIndexDataError) throw error;
+    throw new ExperimentIndexDataError(`Experiment Index JSON 无法解析: ${error.message}`);
   }
 }

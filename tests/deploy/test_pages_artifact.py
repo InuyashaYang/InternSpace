@@ -51,11 +51,12 @@ class PagesArtifactTests(unittest.TestCase):
             self.assertIn(Path("web/styles.css"), checked)
             self.assertIn(Path("web/src/app.js"), checked)
             self.assertIn(Path("data/feature-tree.json"), checked)
+            self.assertIn(Path("data/experiments.json"), checked)
 
-    def test_root_page_discloses_demo_telemetry_before_entering_web_app(self) -> None:
+    def test_root_page_discloses_experiment_cursor_policy_before_entering_web_app(self) -> None:
         text = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
-        self.assertIn("DEMO telemetry", text)
-        self.assertIn("不是训练结果", text)
+        self.assertIn("Experiment cursors", text)
+        self.assertIn("不会补写假 loss", text)
         self.assertIn('href="./web/"', text)
         self.assertIn("url=./web/", text)
 

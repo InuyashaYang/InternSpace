@@ -12,6 +12,8 @@ for (const feature of legacyFixture.features) {
 async function loadFeaturePayload(page, payload) {
   await page.unroute("**/data/feature-tree.json");
   await page.route("**/data/feature-tree.json", (route) => route.fulfill({ json: payload }));
+  await page.unroute("**/data/experiments.json").catch(() => {});
+  await page.route("**/data/experiments.json", (route) => route.fulfill({ json: { experiments: [] } }));
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-ready", "true");
 }
@@ -363,14 +365,17 @@ test("search and detail render bilingual values as text, not HTML", async ({ pag
   expect(await page.evaluate(() => window.__webXss)).toBeUndefined();
 });
 
-test("canonical stats and DEMO telemetry remain visibly separated and stoppable", async ({ page }) => {
+test("canonical stats and experiment cursors remain visibly separated and stoppable", async ({ page }) => {
   await expect(page.locator(".canonical-stats .stat-source")).toHaveText("CANONICAL");
   await expect(page.locator("#stat-features")).toHaveText("11");
   await expect(page.locator("#stat-categories")).toHaveText("1");
   await expect(page.locator("#stat-code-pinned")).toHaveText("10");
   await expect(page.locator("#stat-validation")).toContainText("未验证");
-  await expect(page.locator(".demo-stats .stat-source")).toContainText("DEMO · 模拟");
-  await expect(page.locator("html")).toHaveAttribute("data-telemetry-source", "demo");
+  await expect(page.locator(".experiment-stats .stat-source")).toContainText("EXPERIMENTS");
+  await expect(page.locator("#experiment-count")).toHaveText("2");
+  await expect(page.locator("#experiment-completed")).toHaveText("0");
+  await expect(page.locator("#experiment-final-loss")).toHaveText("—");
+  await expect(page.locator("html")).toHaveAttribute("data-telemetry-source", "experiment-replay");
 
   const firstTick = Number(await page.locator("html").getAttribute("data-telemetry-tick"));
   await expect.poll(async () => Number(await page.locator("html").getAttribute("data-telemetry-tick"))).toBeGreaterThan(firstTick);
@@ -381,13 +386,18 @@ test("canonical stats and DEMO telemetry remain visibly separated and stoppable"
   const stoppedTick = await page.locator("html").getAttribute("data-telemetry-tick");
   await page.waitForTimeout(1800);
   expect(await page.locator("html").getAttribute("data-telemetry-tick")).toBe(stoppedTick);
-  await expect(page.locator("#demo-loss")).toHaveText("—");
+  await expect(page.locator("#experiment-replay")).toHaveText("0");
 
   const canonicalText = await page.evaluate(() => {
     const resource = performance.getEntriesByType("resource").find((entry) => entry.name.includes("feature-tree.json"));
     return fetch(resource.name).then((response) => response.text());
   });
   expect(canonicalText).not.toMatch(/DEMO telemetry|"simulated"|"sparkline"/i);
+  const experimentText = await page.evaluate(() => {
+    const resource = performance.getEntriesByType("resource").find((entry) => entry.name.includes("experiments.json"));
+    return fetch(resource.name).then((response) => response.text());
+  });
+  expect(experimentText).toMatch(/covered_feature_ids/);
 });
 
 test("category filter only dims presentation and never changes the tree", async ({ page }) => {
@@ -404,7 +414,7 @@ test("category filter only dims presentation and never changes the tree", async 
   await expect(page.locator("[data-feature-id]")).toHaveCount(5);
 });
 
-test("reduced motion freezes DEMO telemetry at the seeded first snapshot", async ({ page }) => {
+test("reduced motion freezes experiment replay at the first snapshot", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-ready", "true");

@@ -57,4 +57,7 @@ test("formal unverified detail is ordered, explicit and has a safe pinned locato
   assert.match(html, /class="pinned-link"/);
   assert.doesNotMatch(html, /[?&](token|auth|secret|credential)=/i);
   assert.doesNotMatch(html, /<h3>实验<\/h3>/);
+  assert.doesNotMatch(html, /record type/);
+  assert.doesNotMatch(html, /parent id/);
+  assert.doesNotMatch(html, /<dt>fields<\/dt>/);
 });

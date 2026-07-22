@@ -25,6 +25,7 @@ FIXED_RUNTIME_FILES = (
     Path("web/index.html"),
     Path("web/styles.css"),
     Path("data/feature-tree.json"),
+    Path("data/experiments.json"),
 )
 BLOCKED_DIRECTORY_NAMES = {
     ".git",
@@ -201,6 +202,10 @@ def check_static_links(artifact_root: Path) -> tuple[Path, ...]:
     if data_target is None or data_target not in files:
         raise ArtifactError(f"default Feature Tree data URL does not resolve in artifact: {match.group(1)!r}")
     checked.add(data_target)
+    experiments_target = Path("data/experiments.json")
+    if experiments_target not in files:
+        raise ArtifactError("default Experiment Index data URL does not resolve in artifact: 'data/experiments.json'")
+    checked.add(experiments_target)
 
     required = {
         Path("index.html"),
@@ -208,6 +213,7 @@ def check_static_links(artifact_root: Path) -> tuple[Path, ...]:
         Path("web/styles.css"),
         Path("web/src/app.js"),
         Path("data/feature-tree.json"),
+        Path("data/experiments.json"),
     }
     missing = sorted(required - files)
     if missing:

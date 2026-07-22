@@ -1,9 +1,9 @@
-import { FeatureTreeDataError, loadFeatureTree } from "./data-adapter.js";
+import { ExperimentIndexDataError, FeatureTreeDataError, loadExperimentIndex, loadFeatureTree } from "./data-adapter.js";
 import { compactFeatureTitle, featureEnglishSubtitle, featureTitle, matchesFeatureSearch } from "./feature-display.js";
 import { featureValidation, primaryCodeHint, structuredCodeLocators } from "./feature-view-model.js";
 import { ancestorIds, boundsForIds, layoutTree, visibleFeatureIds } from "./tree-layout.js";
 import { renderDetail } from "./detail-view.js";
-import { DemoTelemetryProvider } from "./telemetry.js";
+import { ExperimentReplayProvider } from "./telemetry.js";
 import { exceedsPanThreshold, translatedViewport } from "./viewport-state.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -37,13 +37,15 @@ const elements = {
   statCategories: document.querySelector("#stat-categories"),
   statCodePinned: document.querySelector("#stat-code-pinned"),
   statValidation: document.querySelector("#stat-validation"),
-  demoLoss: document.querySelector("#demo-loss"),
-  demoThroughput: document.querySelector("#demo-throughput"),
-  demoActive: document.querySelector("#demo-active"),
+  experimentCount: document.querySelector("#experiment-count"),
+  experimentCompleted: document.querySelector("#experiment-completed"),
+  experimentFinalLoss: document.querySelector("#experiment-final-loss"),
+  experimentReplay: document.querySelector("#experiment-replay"),
 };
 
 const state = {
   tree: null,
+  experimentIndex: null,
   layout: null,
   expanded: new Set(),
   selectedId: null,
@@ -57,7 +59,7 @@ const state = {
   telemetryEnabled: true,
   telemetrySnapshot: null,
   stopTelemetry: null,
-  telemetryProvider: new DemoTelemetryProvider(),
+  telemetryProvider: new ExperimentReplayProvider(),
 };
 
 function featureCategory(feature) {
@@ -184,15 +186,15 @@ function renderTree() {
       code.textContent = codeHint;
       card.append(code);
     }
-    const telemetry = svgElement("g", { class: "node-telemetry" });
-    const sim = svgElement("text", { x: 16, y: 90, class: "node-demo-label" });
-    sim.textContent = "SIM";
-    telemetry.append(sim);
-    telemetry.append(svgElement("text", { x: 38, y: 90, class: "node-demo-loss" }));
-    telemetry.append(svgElement("polyline", { class: "node-sparkline" }));
-    telemetry.append(svgElement("rect", { class: "node-progress-track", x: 0, y: 98, width: state.layout.config.nodeWidth, height: 2 }));
-    telemetry.append(svgElement("rect", { class: "node-progress-fill", x: 0, y: 98, width: 0, height: 2 }));
-    card.append(telemetry);
+    const experiment = svgElement("g", { class: "node-experiment" });
+    const expLabel = svgElement("text", { x: 16, y: 90, class: "node-exp-label" });
+    expLabel.textContent = "EXP";
+    experiment.append(expLabel);
+    experiment.append(svgElement("text", { x: 38, y: 90, class: "node-exp-summary" }));
+    experiment.append(svgElement("polyline", { class: "node-sparkline" }));
+    experiment.append(svgElement("rect", { class: "node-progress-track", x: 0, y: 98, width: state.layout.config.nodeWidth, height: 2 }));
+    experiment.append(svgElement("rect", { class: "node-progress-fill", x: 0, y: 98, width: 0, height: 2 }));
+    card.append(experiment);
     if (children.length) {
       const toggle = svgElement("g", { class: "node-toggle", transform: `translate(${state.layout.config.nodeWidth - 11} 18)`, "data-toggle-id": id });
       toggle.append(svgElement("circle", { r: 10 }));
@@ -240,17 +242,7 @@ function closeDrawer() {
 function renderDrawer() {
   if (!state.tree || !state.selectedId) return;
   const feature = state.tree.byId.get(state.selectedId);
-  elements.detailContent.innerHTML = renderDetail(feature, state.tree);
-  const demo = document.createElement("section");
-  demo.className = "detail-demo";
-  const label = document.createElement("strong");
-  label.textContent = "DEMO TELEMETRY · 模拟";
-  const values = document.createElement("p");
-  values.dataset.demoValues = "";
-  const notice = document.createElement("p");
-  notice.textContent = "仅用于界面演示，不构成效果证据，也不会写入 canonical 数据。";
-  demo.append(label, values, notice);
-  elements.detailContent.append(demo);
+  elements.detailContent.innerHTML = renderDetail(feature, state.tree, experimentsForFeature(feature.id));
   updateTelemetryDom();
 }
 
@@ -356,42 +348,76 @@ function sparklinePoints(values) {
   }).join(" ");
 }
 
+function experimentsForFeature(featureId) {
+  return state.experimentIndex?.byFeatureId.get(featureId) ?? [];
+}
+
+function experimentStatusSummary(experiments) {
+  if (!experiments.length) return "no runs";
+  const counts = new Map();
+  for (const experiment of experiments) counts.set(experiment.status, (counts.get(experiment.status) ?? 0) + 1);
+  const preferred = ["running", "completed", "planned", "failed", "inconclusive", "archived"]
+    .filter((status) => counts.has(status))
+    .map((status) => `${counts.get(status)} ${status}`);
+  return preferred.join(" / ");
+}
+
+function lossMetric(experiment) {
+  const value = Number(experiment?.final_metrics?.loss);
+  return Number.isFinite(value) ? value : null;
+}
+
+function latestFinalLoss() {
+  const completed = state.experimentIndex?.experiments
+    .filter((experiment) => experiment.status === "completed")
+    .map((experiment) => ({ experiment, loss: lossMetric(experiment) }))
+    .filter((item) => item.loss != null) ?? [];
+  return completed.at(-1)?.loss ?? null;
+}
+
+function replayForFeature(featureId) {
+  const snapshot = state.telemetrySnapshot;
+  if (!snapshot || !state.telemetryEnabled) return null;
+  for (const experiment of experimentsForFeature(featureId)) {
+    const replay = snapshot.byExperiment.get(experiment.id);
+    if (replay) return replay;
+  }
+  return null;
+}
+
 function updateTelemetryDom() {
   const snapshot = state.telemetrySnapshot;
   elements.app.classList.toggle("telemetry-off", !state.telemetryEnabled);
   elements.telemetryToggle.setAttribute("aria-pressed", String(state.telemetryEnabled));
-  elements.telemetryToggle.textContent = state.telemetryEnabled ? "模拟实时 开" : "模拟实时 关";
-  if (!snapshot || !state.telemetryEnabled) {
-    elements.demoLoss.textContent = "—";
-    elements.demoThroughput.textContent = "—";
-    elements.demoActive.textContent = "—";
-    return;
-  }
-  elements.demoLoss.textContent = snapshot.aggregate.loss.toFixed(3);
-  elements.demoThroughput.textContent = `${snapshot.aggregate.throughput.toFixed(0)} t/s`;
-  elements.demoActive.textContent = String(snapshot.aggregate.active);
-  document.documentElement.dataset.telemetrySource = snapshot.source;
-  document.documentElement.dataset.telemetryTick = String(snapshot.tick);
+  elements.telemetryToggle.textContent = state.telemetryEnabled ? "W&B 回放 开" : "W&B 回放 关";
+  const experiments = state.experimentIndex?.experiments ?? [];
+  const completed = experiments.filter((experiment) => experiment.status === "completed").length;
+  const finalLoss = latestFinalLoss();
+  elements.experimentCount.textContent = String(experiments.length);
+  elements.experimentCompleted.textContent = String(completed);
+  elements.experimentFinalLoss.textContent = finalLoss == null ? "—" : finalLoss.toFixed(3);
+  elements.experimentReplay.textContent = snapshot && state.telemetryEnabled ? String(snapshot.aggregate.replaying) : "0";
+  document.documentElement.dataset.telemetrySource = snapshot?.source ?? "experiment-index";
+  document.documentElement.dataset.telemetryTick = String(snapshot?.tick ?? 0);
   for (const node of elements.nodes.querySelectorAll("[data-feature-id]")) {
-    const telemetry = snapshot.byFeature.get(node.dataset.featureId);
-    if (!telemetry) continue;
-    node.querySelector(".node-demo-loss").textContent = `loss ${telemetry.loss.toFixed(3)}`;
-    node.querySelector(".node-sparkline").setAttribute("points", sparklinePoints(telemetry.sparkline));
-    node.querySelector(".node-progress-fill").setAttribute("width", String(state.layout.config.nodeWidth * telemetry.progress));
-  }
-  const drawerValues = elements.detailContent.querySelector("[data-demo-values]");
-  const selected = snapshot.byFeature.get(state.selectedId);
-  if (drawerValues && selected) {
-    drawerValues.textContent = `loss ${selected.loss.toFixed(3)} · throughput ${selected.throughput.toFixed(1)} t/s · progress ${(selected.progress * 100).toFixed(1)}%`;
+    const featureId = node.dataset.featureId;
+    const covered = experimentsForFeature(featureId);
+    const replay = replayForFeature(featureId);
+    const summary = node.querySelector(".node-exp-summary");
+    const sparkline = node.querySelector(".node-sparkline");
+    const progress = node.querySelector(".node-progress-fill");
+    summary.textContent = replay ? `replay loss ${replay.loss.toFixed(3)}` : experimentStatusSummary(covered);
+    sparkline.setAttribute("points", replay ? sparklinePoints(replay.sparkline) : "");
+    progress.setAttribute("width", String(state.layout.config.nodeWidth * (replay?.progress ?? 0)));
   }
 }
 
 function startTelemetry() {
   state.stopTelemetry?.();
-  if (!state.telemetryEnabled || !state.tree) return;
+  if (!state.telemetryEnabled || !state.experimentIndex) return;
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
   state.stopTelemetry = state.telemetryProvider.start(
-    state.tree.features.map((feature) => feature.id),
+    state.experimentIndex.experiments,
     (snapshot) => {
       state.telemetrySnapshot = snapshot;
       updateTelemetryDom();
@@ -448,9 +474,16 @@ function formalDataUrl() {
     : new URL("data/feature-tree.json", pageBase);
 }
 
+function formalExperimentUrl() {
+  const pageBase = new URL(".", document.baseURI);
+  return pageBase.pathname.endsWith("/web/")
+    ? new URL("../data/experiments.json", pageBase)
+    : new URL("data/experiments.json", pageBase);
+}
+
 function showError(error) {
   elements.empty.hidden = false;
-  elements.emptyMessage.textContent = error instanceof FeatureTreeDataError
+  elements.emptyMessage.textContent = error instanceof FeatureTreeDataError || error instanceof ExperimentIndexDataError
     ? [error.message, ...error.details].join("；")
     : error.message;
   elements.svg.classList.add("is-unavailable");
@@ -461,17 +494,20 @@ async function initialize() {
   elements.svg.classList.remove("is-unavailable");
   try {
     state.tree = await loadFeatureTree(formalDataUrl());
+    state.experimentIndex = await loadExperimentIndex(formalExperimentUrl(), state.tree);
     state.layout = layoutTree(state.tree);
     state.expanded = new Set([state.tree.rootId]);
     state.selectedId = state.tree.rootId;
     elements.svg.setAttribute("viewBox", `0 0 ${Math.max(state.layout.width, 1200)} ${Math.max(state.layout.height, 720)}`);
-    elements.detailContent.innerHTML = renderDetail(state.tree.byId.get(state.tree.rootId), state.tree);
+    elements.detailContent.innerHTML = renderDetail(state.tree.byId.get(state.tree.rootId), state.tree, []);
     renderCanonicalStats();
     renderCategoryFilters();
     renderTree();
+    updateTelemetryDom();
     fitTree();
     document.documentElement.dataset.ready = "true";
     document.documentElement.dataset.featureCount = String(state.tree.features.length);
+    document.documentElement.dataset.experimentCount = String(state.experimentIndex.experiments.length);
     document.documentElement.dataset.structuralEdgeCount = String(state.tree.features.length - 1);
     document.documentElement.dataset.auxiliaryEdgeCount = String(state.tree.features.reduce(
       (count, feature) => count + feature.depends_on.length + feature.related_to.length,

@@ -36,18 +36,19 @@ npm run serve --prefix web
 `features/*.json`；`data/feature-tree.json` 由
 `python3 scripts/build_feature_tree.py` 确定性生成，不手工维护。
 
-## DEMO telemetry
+## Experiment cursors
 
-页面中明确标记为 **DEMO telemetry** 的 loss、吞吐和训练进度仅用于界面与交互可视化：
+loss、W&B run 和训练状态属于实验记录，不属于单个 Feature 点。一个实验可以覆盖多个
+Feature；Feature 节点只显示它被哪些实验覆盖。
 
-- 它们不是训练结果；
-- 不进入 Feature `validation`、experiment、artifact 或 evidence；
-- 不允许写回 `features/*.json` 或 `data/feature-tree.json`；
-- 未来真实日志/session 流通过同一 telemetry provider contract 接入，并明确标识真实
-  provider 与来源。
+- 已完成实验：展示 W&B URL、最终 loss 和其他 final metrics；
+- 正在展示的曲线：只能来自已抓取的 W&B loss trace 回放，并标为 `W&B replay`；
+- 真正实时日志：未来作为 `cursor_type: live` 接入，必须声明来源；
+- 没有 W&B 或结果 artifact 的实验保持 `planned` / `inconclusive`，不补假 loss。
 
-Pages artifact 构建会扫描 canonical JSON，阻止带 `demo/mock/simulated` 标记的
-telemetry、loss、throughput 或 progress 字段进入正式数据。
+第一版实验索引位于 `data/experiments.json`。它是页面运行数据的一部分，但不会改变
+Feature Tree 的结构父子关系。Pages artifact 构建仍会阻止 `demo/mock/simulated`
+telemetry 字段写入正式 Feature canonical。
 
 ## GitHub Pages 部署
 
@@ -68,6 +69,7 @@ web/index.html
 web/styles.css
 web/src/*.js
 data/feature-tree.json
+data/experiments.json
 ```
 
 不会上传 tests、evaluation、ingest、sources、features、schema、私有工作材料、Web 文档、
@@ -84,4 +86,3 @@ python3 scripts/build_pages_artifact.py --output /tmp/internspace-pages
 
 仓库 Settings → Pages 的 Source 必须选择 **GitHub Actions**。切换后可手动运行 workflow
 或等待下一次 `main` push；无需额外 secret。
-

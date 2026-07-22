@@ -24,14 +24,14 @@ class Requirement:
 REQUIREMENTS = [
     Requirement("VIZ-01", "dark visual tokens, fixed glass header, canonical and DEMO sources stay distinct"),
     Requirement("VIZ-02", "first viewport is only the root plus four structural branches with no era or lane forest"),
-    Requirement("VIZ-03", "nodes expose restrained category accent, validation, symbol and explicitly simulated sparkline"),
+    Requirement("VIZ-03", "nodes expose restrained category accent, validation, symbol and experiment coverage marker"),
     Requirement("VIZ-04", "drawer is closed by default, opens on node click, contains complete research fields and closes cleanly"),
     Requirement("VIZ-05", "structural and auxiliary edges have separate semantics"),
     Requirement("VIZ-06", "desktop and mobile layouts avoid node overlap, drawer occlusion and page-level horizontal overflow"),
     Requirement("VIZ-07", "pan zoom search keyboard and reduced-motion remain operable"),
     Requirement("VIZ-08", "local root, web, canonical data, CSS and JS assets all return 200"),
     Requirement("VIZ-09", "GitHub Pages root, web, canonical data, CSS and JS assets all return 200", False),
-    Requirement("VIZ-10", "DemoTelemetryProvider is deterministic, disableable and never mutates canonical research evidence"),
+    Requirement("VIZ-10", "ExperimentReplayProvider is deterministic, disableable and never mutates canonical research evidence"),
     Requirement("VIZ-11", "capture reference, desktop, drawer and mobile screenshots outside Git"),
 ]
 

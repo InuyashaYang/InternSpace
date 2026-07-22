@@ -47,6 +47,17 @@ function htmlSection(title, content, className = "") {
   return `<section class="detail-section ${className}"><h3>${title}</h3>${content}</section>`;
 }
 
+function safeExternalUrl(value) {
+  if (!value) return "";
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password) return "";
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
 function renderDelta(feature, parent) {
   const operations = deltaOperations(feature);
   if (!operations.length && !parent) return "";
@@ -122,6 +133,59 @@ function renderValidation(feature) {
   `, "detail-validation");
 }
 
+const EXPERIMENT_STATUS_LABEL = Object.freeze({
+  planned: "计划中",
+  running: "运行中",
+  completed: "已完成",
+  failed: "失败",
+  inconclusive: "无结论",
+  archived: "已归档",
+});
+
+const CURSOR_TYPE_LABEL = Object.freeze({
+  none: "无光标",
+  "wandb-final": "W&B final",
+  "wandb-replay": "W&B 回放 · 非实时",
+  live: "实时",
+});
+
+function renderExperimentMetrics(metrics) {
+  const entries = Object.entries(metrics ?? {}).filter(([, value]) => value != null && value !== "");
+  if (!entries.length) return "";
+  return `<dl class="experiment-metrics">${entries.map(([key, value]) => `
+    <div><dt>${escapeHtml(key)}</dt><dd><code>${escapeHtml(value)}</code></dd></div>
+  `).join("")}</dl>`;
+}
+
+function renderExperiments(experiments) {
+  if (!experiments?.length) return "";
+  const content = experiments.map((experiment) => {
+    const title = experiment.title_zh || experiment.title;
+    const wandbUrl = safeExternalUrl(experiment.wandb_url);
+    const status = EXPERIMENT_STATUS_LABEL[experiment.status] ?? experiment.status;
+    const cursor = CURSOR_TYPE_LABEL[experiment.cursor_type] ?? experiment.cursor_type;
+    const metrics = renderExperimentMetrics(experiment.final_metrics);
+    const covered = experiment.covered_feature_ids?.length
+      ? `<p class="experiment-covered">覆盖 Feature：${experiment.covered_feature_ids.map((id) => `<code>${escapeHtml(id)}</code>`).join(" ")}</p>`
+      : "";
+    return `
+      <article class="experiment-card status-${escapeHtml(experiment.status)}">
+        <div class="experiment-card-head">
+          <strong>${escapeHtml(title)}</strong>
+          <span>${escapeHtml(status)}</span>
+        </div>
+        <code>${escapeHtml(experiment.id)}</code>
+        ${experiment.summary_zh || experiment.summary ? `<p>${escapeHtml(experiment.summary_zh || experiment.summary)}</p>` : ""}
+        <div class="experiment-cursor"><span>光标类型</span><strong>${escapeHtml(cursor)}</strong></div>
+        ${metrics}
+        ${wandbUrl ? `<a class="wandb-link" href="${escapeHtml(wandbUrl)}" target="_blank" rel="noreferrer">打开 W&B run ↗</a>` : ""}
+        ${covered}
+      </article>
+    `;
+  }).join("");
+  return htmlSection("实验覆盖 / W&B 与结果", `<div class="experiment-list">${content}</div>`, "detail-experiments");
+}
+
 function renderRelations(feature, tree) {
   const dependencies = feature.depends_on.map((id) => tree.byId.get(id)).filter(Boolean);
   const related = feature.related_to.map((id) => tree.byId.get(id)).filter(Boolean);
@@ -134,15 +198,32 @@ function renderRelations(feature, tree) {
 
 function renderLimitationsAndProvenance(feature) {
   const validation = validationView(feature);
-  const content = {
-    ...(validation.limitations.length ? { Limitations: validation.limitations } : {}),
-    ...(feature.evidence?.length ? { Evidence: feature.evidence } : {}),
-    ...(feature.provenance && Object.keys(feature.provenance).length ? { "来源 / Provenance": feature.provenance } : {}),
-  };
-  return section("Limitations / 来源与 provenance", content, "detail-provenance");
+  const limitationHtml = validation.limitations.length
+    ? `<div class="provenance-block"><span>Limitations</span>${renderValue(validation.limitations)}</div>`
+    : "";
+  const evidenceHtml = feature.evidence?.length
+    ? `<div class="provenance-block"><span>Evidence</span>${renderValue(feature.evidence)}</div>`
+    : "";
+  const sources = feature.provenance?.sources && typeof feature.provenance.sources === "object"
+    ? Object.entries(feature.provenance.sources)
+    : [];
+  const sourceHtml = sources.length
+    ? `<div class="provenance-block provenance-sources"><span>Sources</span>${sources.map(([sourceId, source]) => `
+      <article class="provenance-source">
+        <div><code>${escapeHtml(sourceId)}</code><strong>${escapeHtml(source.state ?? "")}</strong></div>
+        ${source.note ? `<p>${escapeHtml(source.note)}</p>` : ""}
+        ${source.source_ids?.length ? `<small>Evidence IDs: ${source.source_ids.map((id) => escapeHtml(id)).join(", ")}</small>` : ""}
+      </article>
+    `).join("")}</div>`
+    : "";
+  return htmlSection(
+    "Limitations / 来源与 provenance",
+    `${limitationHtml}${evidenceHtml}${sourceHtml}`,
+    "detail-provenance",
+  );
 }
 
-export function renderDetail(feature, tree) {
+export function renderDetail(feature, tree, experiments = []) {
   const parent = feature.parent_id ? tree.byId.get(feature.parent_id) : null;
   const validation = featureValidation(feature);
   const englishSubtitle = featureEnglishSubtitle(feature)
@@ -160,6 +241,7 @@ export function renderDetail(feature, tree) {
     ${renderConfiguration(feature)}
     ${renderLocators(feature)}
     ${renderValidation(feature)}
+    ${renderExperiments(experiments)}
     ${renderRelations(feature, tree)}
     ${renderLimitationsAndProvenance(feature)}
   `;
