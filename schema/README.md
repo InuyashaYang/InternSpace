@@ -1,8 +1,9 @@
 # Feature Tree v1 contract
 
 正式 source of truth 位于 `features/<feature-id>.json`；`data/feature-tree.json` 是由
-`scripts/build_feature_tree.py` 生成的只读投影。JSON Schema 位于
-`schema/feature-tree.schema.json`。这是 InternSpace 自有的小型 v1 contract，不迁移
+`scripts/build_feature_tree.py` 生成的只读投影。Feature Tree JSON Schema 位于
+`schema/feature-tree.schema.json`。实验覆盖索引位于 `data/experiments.json`，Schema 位于
+`schema/experiment-index.schema.json`。这是 InternSpace 自有的小型 v1 contract，不迁移
 LumiaTree schema，也不允许聚合文件成为第二份手工真相。
 
 ## 数据边界
@@ -82,6 +83,24 @@ JSON Schema 无法表达的 invariants：
 - 主数组和顶层不存在 commit、session、experiment、component 等伪节点集合；
 - evidence 与逐字段 provenance 引用均可解析；缺失 baseline 值必须保持 unresolved。
 
+## Experiment Index contract
+
+`data/experiments.json` 只描述实验对 Feature 的覆盖关系，不产生树节点。一个实验可以覆盖
+多个 Feature，Feature 详情页反向展示这些实验。实验光标类型固定为：
+
+- `none`：无可展示光标；
+- `wandb-final`：已完成/归档结果，只展示 sanitized W&B URL 和 final metrics；
+- `wandb-replay`：已抓取 loss trace 的页面回放，不表示实时训练；
+- `live`：未来实时接入预留类型。
+
+W&B URL 必须是无凭证、无 query、无 fragment 的 `https://wandb.ai/...` 地址。带
+`accessToken` 或任何 token-like 值的实验数据会被拒绝。`wandb-replay` 必须显式提供至少
+两个数值 loss trace 点；非 replay 光标不得启用 replay。`covered_feature_ids` 与
+`primary_feature_ids` 都必须引用已 merge 的 Feature，且 primary 必须同时出现在 covered 中。
+
+根节点上的 OLMo2 W&B report 只是外部训练日志参考，不是 OLMo-3 标准态 root provenance；
+root baseline provenance 仍按上文规则保持 unresolved，直到取得真正的官方 OLMo-3 pinned source。
+
 ## 结构边界裁决 contract
 
 `schema/structural-feature-admission.schema.json` 是人工 architecture 边界 review 的辅助
@@ -108,6 +127,8 @@ python3 scripts/build_feature_tree.py
 python3 scripts/build_feature_tree.py --check
 python3 scripts/validate_feature_tree.py
 python3 scripts/validate_feature_tree.py --json
+python3 scripts/validate_experiments.py
+python3 scripts/validate_experiments.py --json
 ```
 
 运行模型专项测试：

@@ -217,6 +217,18 @@ class FeatureTreeValidationTests(unittest.TestCase):
         self.assertIn("CREDENTIAL_OR_UNSTABLE_REPOSITORY", codes)
         self.assertIn("REVISION_NOT_IN_CODE_URL", codes)
 
+    def test_experiment_index_schema_is_present_and_wandb_report_is_sanitized(self) -> None:
+        schema_path = REPO_ROOT / "schema" / "experiment-index.schema.json"
+        self.assertTrue(schema_path.is_file())
+        document = json.loads((REPO_ROOT / "data" / "experiments.json").read_text(encoding="utf-8"))
+        wandb = self.experiment(document, "exp-olmo2-0425-1b-training-report")
+        self.assertEqual("https://wandb.ai/ai2-llm/olmo-small/reports/Training-Logs-of-OLMo2-0425-1B--VmlldzoxMjUzOTUxNA", wandb["wandb_url"])
+        self.assertNotIn("accessToken", json.dumps(document, ensure_ascii=False))
+
+    @staticmethod
+    def experiment(data: dict, experiment_id: str) -> dict:
+        return next(experiment for experiment in data["experiments"] if experiment["id"] == experiment_id)
+
     def test_cli_json_output_is_repeatable(self) -> None:
         command = [sys.executable, str(CLI_PATH), "--json"]
         first = subprocess.run(command, cwd=REPO_ROOT, check=True, text=True, capture_output=True)

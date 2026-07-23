@@ -168,6 +168,9 @@ function renderExperiments(experiments) {
     const covered = experiment.covered_feature_ids?.length
       ? `<p class="experiment-covered">覆盖 Feature：${experiment.covered_feature_ids.map((id) => `<code>${escapeHtml(id)}</code>`).join(" ")}</p>`
       : "";
+    const rootReferenceNotice = experiment.type === "training_reference" && experiment.covered_feature_ids?.includes("feat-olmo3-standard")
+      ? `<p class="experiment-notice">外部训练日志参考；不是 OLMo-3 标准态的 root provenance。</p>`
+      : "";
     return `
       <article class="experiment-card status-${escapeHtml(experiment.status)}">
         <div class="experiment-card-head">
@@ -179,6 +182,7 @@ function renderExperiments(experiments) {
         <div class="experiment-cursor"><span>光标类型</span><strong>${escapeHtml(cursor)}</strong></div>
         ${metrics}
         ${wandbUrl ? `<a class="wandb-link" href="${escapeHtml(wandbUrl)}" target="_blank" rel="noreferrer">打开 W&B run ↗</a>` : ""}
+        ${rootReferenceNotice}
         ${covered}
       </article>
     `;

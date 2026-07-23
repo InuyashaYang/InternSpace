@@ -186,11 +186,13 @@ function renderTree() {
       code.textContent = codeHint;
       card.append(code);
     }
-    const experiment = svgElement("g", { class: "node-experiment" });
+    const coveredExperiments = experimentsForFeature(id);
+    const hasWandb = coveredExperiments.some((item) => item.wandb_url);
+    const experiment = svgElement("g", { class: `node-experiment${hasWandb ? " has-wandb" : ""}` });
     const expLabel = svgElement("text", { x: 16, y: 90, class: "node-exp-label" });
-    expLabel.textContent = "EXP";
+    expLabel.textContent = hasWandb ? "EXP · W&B" : "EXP";
     experiment.append(expLabel);
-    experiment.append(svgElement("text", { x: 38, y: 90, class: "node-exp-summary" }));
+    experiment.append(svgElement("text", { x: hasWandb ? 78 : 38, y: 90, class: "node-exp-summary" }));
     experiment.append(svgElement("polyline", { class: "node-sparkline" }));
     experiment.append(svgElement("rect", { class: "node-progress-track", x: 0, y: 98, width: state.layout.config.nodeWidth, height: 2 }));
     experiment.append(svgElement("rect", { class: "node-progress-fill", x: 0, y: 98, width: 0, height: 2 }));
@@ -354,6 +356,12 @@ function experimentsForFeature(featureId) {
 
 function experimentStatusSummary(experiments) {
   if (!experiments.length) return "no runs";
+  const wandbCount = experiments.filter((experiment) => experiment.wandb_url).length;
+  if (wandbCount) {
+    const otherCount = experiments.length - wandbCount;
+    if (!otherCount) return wandbCount === 1 ? "W&B report" : `${wandbCount} W&B reports`;
+    return `${wandbCount} W&B / ${otherCount} other`;
+  }
   const counts = new Map();
   for (const experiment of experiments) counts.set(experiment.status, (counts.get(experiment.status) ?? 0) + 1);
   const preferred = ["running", "completed", "planned", "failed", "inconclusive", "archived"]
