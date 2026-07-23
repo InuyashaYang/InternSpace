@@ -52,6 +52,7 @@ class PagesArtifactTests(unittest.TestCase):
             self.assertIn(Path("web/src/app.js"), checked)
             self.assertIn(Path("data/feature-tree.json"), checked)
             self.assertIn(Path("data/experiments.json"), checked)
+            self.assertIn(Path("data/template-test-overlay.json"), checked)
 
     def test_root_page_discloses_experiment_cursor_policy_before_entering_web_app(self) -> None:
         text = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
@@ -132,6 +133,8 @@ class PagesArtifactTests(unittest.TestCase):
         self.assertIn("scripts/build_feature_tree.py --check", text)
         self.assertIn("scripts/validate_feature_tree.py", text)
         self.assertIn("scripts/validate_experiments.py", text)
+        self.assertIn("scripts/build_template_test_overlay.py --fallback-existing", text)
+        self.assertIn('cron: "17 * * * *"', text)
         self.assertIn("npm test --prefix web", text)
         self.assertNotIn("concept_olmo", text)
         self.assertNotIn("secrets.", text)

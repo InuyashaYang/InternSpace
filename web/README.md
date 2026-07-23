@@ -2,6 +2,8 @@
 
 页面只读加载仓库正式数据 `/data/feature-tree.json`，主画布仅渲染由 `parent_id` 组成的 Feature Tree。`depends_on` 与 `related_to` 只在选中相关 Feature 后显示，不参与布局。
 
+页面另加载 `/data/template-test-overlay.json` 作为纯展示叠图。只有显式映射到现有 Feature ID 的外部 submission 才能覆盖标题、摘要与实验展示；canonical ID、`parent_id`、子树位置和本地 evidence 不被改写。被覆盖节点显示 `DUAL`，详情同时保留外部 template-test 属性与本地 InternSpace 属性。
+
 ## 视觉与卡片层级
 
 页面使用近黑蓝 `#070b14` / `#0b1120` 背景、38px 低对比网格、64px 玻璃顶栏和深色青蓝卡片。仍然只有一棵从 OLMo-3 根向右生长的确定性 Feature Tree，不包含时间轴、lane、era 或多根森林。

@@ -175,6 +175,22 @@ description: ConceptLM V2.2 OLMo 7B training logic snapshot
 - 节点颜色只表达少量稳定状态，不为每种关系创造强颜色。
 - 大树必须使用确定性布局；更新数据后同一 Feature 不应无故跳位。
 
+### 外部模板叠图
+
+页面允许加载独立的、非 canonical 的外部 submission overlay。叠图不会修改
+`features/*.json` 或 `data/feature-tree.json`：
+
+- 外部记录必须通过显式 `maps_to_feature_id` 才能覆盖一个现有点；不凭标题自动猜测；
+- 外部标题、摘要、实验结果可以在展示层优先，本地 Feature ID、单父结构和已有关系必须保留；
+- 被覆盖的点必须显示双重属性和来源，不能让外部 submission 静默冒充 canonical Feature；
+- 外部关系与本地关系取并集，但只有本地 `parent_id` 决定主树布局；
+- 同一 W&B URL 或显式 replacement ID 的实验可叠合，外部显示字段优先，本地覆盖关系与 evidence 保留；
+- 任何 credential-bearing URL 在进入公开 artifact 前必须清洗。
+
+第一版为验证机制，显式把 `OLMo2-0425-1B` 映射到
+`feat-olmo3-standard`。这只是临时可视化别名，不构成 OLMo-2 与 OLMo-3
+架构等价的研究结论；详情页必须持续显示这一冲突。
+
 ## 第一阶段非目标
 
 - 不迁移 LumiaTree 的 v1/v2 canonical architecture IR。

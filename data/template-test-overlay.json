@@ -1,0 +1,321 @@
+{
+  "schema_version": "1.0.0",
+  "overlay_id": "template-test-overlay",
+  "source_repository": "JT-Ushio/template-test",
+  "fetched_at": "2026-07-23T17:43:51+00:00",
+  "merge_policy": {
+    "external_display_precedence": true,
+    "preserve_local_identity": true,
+    "preserve_local_structure": true,
+    "preserve_relation_union": true
+  },
+  "nodes": [
+    {
+      "id": "template-test-olmo2-0425-1b",
+      "external_architecture_id": "olmo2-0425-1b",
+      "maps_to_feature_id": "feat-olmo3-standard",
+      "merge_strategy": "external-display-local-structure",
+      "title": "OLMo-2 1B Base Architecture",
+      "title_zh": "OLMo-2 1B 基础架构",
+      "summary": "This PR adds OLMo2-1B as a reproducible root architecture in this repository. It includes the model configuration, decoder blocks, training and evaluation configurations, checkpoint support, and validation required to use OLMo2-1B as a baseline for future architecture experiments. No intentional architectural modification to the upstream model is introduced.",
+      "summary_zh": "来自 template-test Issue/PR 的 OLMo-2 1B 基础架构提交；在第一版叠图中临时覆盖根点显示，但保留 InternSpace 的 OLMo-3 身份与结构关系。",
+      "status": "closed",
+      "proposal_type": "Root architecture",
+      "hypothesis": "A local implementation based on an official OLMo 2 configuration can provide a reliable root node for future architecture experiments.",
+      "temporary_equivalence": {
+        "external": "olmo2-0425-1b",
+        "local": "feat-olmo3-standard",
+        "assumption": "For the first overlay prototype, treat OLMo2-0425-1B and the OLMo-3 standard root as one display point. This is a visualization alias, not an architecture equivalence claim."
+      },
+      "issue": {
+        "number": 3,
+        "title": "[ARCH-PROP] OLMo2-1B Base Architecture",
+        "url": "https://github.com/JT-Ushio/template-test/issues/3",
+        "state": "closed",
+        "author": "Feanus",
+        "updated_at": "2026-07-23T15:28:49Z"
+      },
+      "pull_request": {
+        "number": 5,
+        "title": "OLMo-2 1B Base Architecture",
+        "url": "https://github.com/JT-Ushio/template-test/pull/5",
+        "state": "closed",
+        "author": "scv11",
+        "head_repository": "scv11/template-test-olmo3",
+        "head_revision": "c8c0f9bab917ea963110fc4cd31cb238eb3bec20",
+        "updated_at": "2026-07-23T15:36:19Z"
+      },
+      "model_configuration": {
+        "number_of_layers": 16,
+        "hidden_size": 2048,
+        "intermediate_size": 8192,
+        "attention_heads": 16,
+        "key_value_heads": 16,
+        "attention_type": "Multi-head causal self-attention",
+        "vocabulary_size": 100352,
+        "maximum_sequence_length": 4096,
+        "activation_function": "SiLU",
+        "normalization": "RMSNorm",
+        "rmsnorm_epsilon": 1e-06,
+        "attention_dropout": 0.0,
+        "attention_bias": false,
+        "rope_theta": 500000,
+        "weight_tying": false,
+        "parameter_scale": "1B"
+      },
+      "commits": [
+        {
+          "sha": "c76b942dac0991fc781d2d7fe757bfa705ab05b2",
+          "message": "add olmo2 init",
+          "author": "scv11",
+          "authored_at": "2026-07-22T12:22:05Z",
+          "url": "https://github.com/scv11/template-test-olmo3/commit/c76b942dac0991fc781d2d7fe757bfa705ab05b2"
+        },
+        {
+          "sha": "c1390d4637c448e2574057f819e6f42884d2ccec",
+          "message": "add olmo2 modeling files",
+          "author": "scv11",
+          "authored_at": "2026-07-22T12:22:35Z",
+          "url": "https://github.com/scv11/template-test-olmo3/commit/c1390d4637c448e2574057f819e6f42884d2ccec"
+        },
+        {
+          "sha": "bdb65e72e819a5d379d474dbec87e41ae9d0591c",
+          "message": "Delete models/olmo2 directory",
+          "author": "scv11",
+          "authored_at": "2026-07-23T09:42:04Z",
+          "url": "https://github.com/scv11/template-test-olmo3/commit/bdb65e72e819a5d379d474dbec87e41ae9d0591c"
+        },
+        {
+          "sha": "7feb82ed48d83f08a99481bd5bd123954f218e75",
+          "message": "add __init__.py",
+          "author": "scv11",
+          "authored_at": "2026-07-23T09:43:02Z",
+          "url": "https://github.com/scv11/template-test-olmo3/commit/7feb82ed48d83f08a99481bd5bd123954f218e75"
+        },
+        {
+          "sha": "276a07c472070e544edb45dad88e5c963fbe5fbd",
+          "message": "add olmo3 config file",
+          "author": "scv11",
+          "authored_at": "2026-07-23T09:43:41Z",
+          "url": "https://github.com/scv11/template-test-olmo3/commit/276a07c472070e544edb45dad88e5c963fbe5fbd"
+        },
+        {
+          "sha": "c8c0f9bab917ea963110fc4cd31cb238eb3bec20",
+          "message": "add olmo3 others",
+          "author": "scv11",
+          "authored_at": "2026-07-23T09:45:07Z",
+          "url": "https://github.com/scv11/template-test-olmo3/commit/c8c0f9bab917ea963110fc4cd31cb238eb3bec20"
+        }
+      ],
+      "implementation_files": [
+        {
+          "path": "models/olmo3/__init__.py",
+          "url": "https://github.com/scv11/template-test-olmo3/blob/c8c0f9bab917ea963110fc4cd31cb238eb3bec20/models/olmo3/__init__.py",
+          "status": "added",
+          "additions": 28,
+          "deletions": 0,
+          "blob_sha": "6e6ea471ca246002a9cc3c1644344cd06d7b9274",
+          "content_sha256": "3691066ba34def8f5bee9ec4b46f45f327faa06c1e67ac10659f3ee981338cbe",
+          "line_count": 28,
+          "symbols": [],
+          "excerpt": "# Copyright 2025 the HuggingFace Team. All rights reserved.\n#\n# Licensed under the Apache License, Version 2.0 (the \"License\");\n# you may not use this file except in compliance with the License.\n# You may obtain a copy of the License at\n#\n#     http://www.apache.org/licenses/LICENSE-2.0\n#\n# Unless required by applicable law or agreed to in writing, software\n# distributed under the License is distributed on an \"AS IS\" BASIS,\n# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.\n# See the License for the specific language governing permissions and\n# limitations under the License.\n\nfrom typing import TYPE_CHECKING\n\nfrom ...utils import _LazyModule\nfrom ...utils.import_utils import define_import_structure\n\n\nif TYPE_CHECKING:\n    from .configuration_olmo3 import *\n    from .modeling_olmo3 import *\nelse:\n    import sys\n\n    _file = globals()[\"__file__\"]\n    sys.modules[__name__] = _LazyModule(__name__, _file, define_import_structure(_file), module_spec=__spec__)"
+        },
+        {
+          "path": "models/olmo3/configuration_olmo3.py",
+          "url": "https://github.com/scv11/template-test-olmo3/blob/c8c0f9bab917ea963110fc4cd31cb238eb3bec20/models/olmo3/configuration_olmo3.py",
+          "status": "added",
+          "additions": 129,
+          "deletions": 0,
+          "blob_sha": "f43d5c02b9c5ec1e60b0f89743893326d87331c7",
+          "content_sha256": "350402470a9cfcd85db984694b0a0f26725fc1d41c4ecfd61274b370aa6fed3c",
+          "line_count": 129,
+          "symbols": [
+            "Olmo3Config",
+            "__post_init__",
+            "convert_rope_params_to_dict"
+          ],
+          "excerpt": "class Olmo3Config(PreTrainedConfig):\n    r\"\"\"\n    Example:\n\n    ```python\n    >>> from transformers import Olmo3Model, Olmo3Config\n\n    >>> # Initializing a Olmo3 7B style configuration\n    >>> configuration = Olmo3Config()\n\n    >>> # Initializing a model from the Olmo3 7B style configuration\n    >>> model = Olmo3Model(configuration)\n\n    >>> # Accessing the model configuration\n    >>> configuration = model.config\n    ```\n    \"\"\"\n\n    model_type = \"olmo3\"\n    keys_to_ignore_at_inference = [\"past_key_values\"]\n    base_model_tp_plan = {\n        \"layers.*.self_attn.q_proj\": \"colwise_gather_output\",  # we need to replicate here due to the added norm on q and k\n        \"layers.*.self_attn.k_proj\": \"colwise_gather_output\",  # we need to replicate here due to the added norm on q and k\n        \"layers.*.self_attn.v_proj\": \"colwise_gather_output\",  # we need to replicate here due to the added norm on q and k\n        \"layers.*.self_attn.o_proj\": \"rowwise_split_input\",  # input is replicated due to the added norm on q and k\n        \"layers.*.mlp.gate_proj\": \"colwise\",\n        \"layers.*.mlp.up_proj\": \"colwise\",\n        \"layers.*.mlp.down_proj\": \"rowwise\",\n    }\n    base_model_pp_plan = {\n        \"embed_tokens\": ([\"input_ids\"], [\"inputs_embeds\"]),\n        \"layers\": ([\"hidden_states\", \"attention_mask\"], [\"hidden_states\"]),\n        \"norm\": ([\"hidden_states\"], [\"hidden_states\"]),\n    }\n\n    vocab_size: int = 50304\n    hidden_size: int = 4096\n    intermediate_size: int = 11008\n    num_hidden_layers: int = 32\n    num_attention_heads: int = 32\n    num_key_value_heads: int | None = None\n    hidden_act: str = \"silu\"\n    max_position_embeddings: int = 2048\n    initializer_range: float = 0.02\n    use_cache: bool = True\n    pad_token_id: int | None = 1\n    bos_token_id: int | None = None\n    eos_token_id: int | list[int] | None = 50279"
+        },
+        {
+          "path": "models/olmo3/minimal_csa_hca_demo.py",
+          "url": "https://github.com/scv11/template-test-olmo3/blob/c8c0f9bab917ea963110fc4cd31cb238eb3bec20/models/olmo3/minimal_csa_hca_demo.py",
+          "status": "added",
+          "additions": 467,
+          "deletions": 0,
+          "blob_sha": "eedbfa70614836eea70730ff663981049e797fae",
+          "content_sha256": "7f4461ae4a9c5c51777f684927a746f2194230ffb91e62db059593082df0e88e",
+          "line_count": 467,
+          "symbols": [
+            "compute_intermediate_size",
+            "read_json",
+            "write_json",
+            "normalize_path",
+            "generate_uuid",
+            "get_bytes_range",
+            "_narrow_tensor_by_index",
+            "_StorageInfo",
+            "_StoragePrefix",
+            "RemoteFileSystemReader",
+            "__init__",
+            "_get_bytes",
+            "_get_content_for_read",
+            "reset",
+            "read_data",
+            "read_metadata",
+            "set_up_storage_reader",
+            "prepare_local_plan",
+            "prepare_global_plan",
+            "checkpoint_id",
+            "validate_checkpoint_id",
+            "load_model",
+            "_load_unsharded_keys",
+            "write_model",
+            "_write_tokenizer",
+            "main"
+          ],
+          "excerpt": "def compute_intermediate_size(n, ffn_dim_multiplier=1, multiple_of=256):\n    return multiple_of * ((int(ffn_dim_multiplier * int(8 * n / 3)) + multiple_of - 1) // multiple_of)\n\n\ndef read_json(path):\n    with open(path, \"r\") as f:\n        return json.load(f)\n\n\ndef write_json(text, path):\n    with open(path, \"w\") as f:\n        json.dump(text, f)\n\n\ndef normalize_path(path: Path | str) -> str:\n    return str(path).rstrip(\"/\").replace(\"file://\", \"\")\n\n\ndef generate_uuid() -> str:\n    return str(uuid.uuid4())\n\n\ndef get_bytes_range(path: Path | str, bytes_start: int, num_bytes: int) -> bytes:\n    with open(path, \"rb\") as f:\n        f.seek(bytes_start)\n        return f.read(num_bytes)\n\n\ndef _narrow_tensor_by_index(tensor: torch.Tensor, offsets: Sequence[int], sizes: Sequence[int]) -> torch.Tensor:\n    \"\"\"\n    Narrow the tensor according to ``offsets`` and ``sizes``.\n    \"\"\"\n    narrowed_tensor = tensor\n    for idx, (offset, size) in enumerate(zip(offsets, sizes)):\n        if size < tensor.size(idx):\n            # Reshape to get shard for this rank and we don't want autograd\n            # recording here for the narrow op and 'local_shard' should be a\n            # leaf variable in the autograd graph.\n            narrowed_tensor = narrowed_tensor.narrow(idx, offset, size)\n    return narrowed_tensor\n\n\n@dataclass\nclass _StorageInfo:\n    \"\"\"This is the per entry storage info.\"\"\"\n\n    relative_path: str\n    offset: int"
+        },
+        {
+          "path": "models/olmo3/modeling_olmo3.py",
+          "url": "https://github.com/scv11/template-test-olmo3/blob/c8c0f9bab917ea963110fc4cd31cb238eb3bec20/models/olmo3/modeling_olmo3.py",
+          "status": "added",
+          "additions": 541,
+          "deletions": 0,
+          "blob_sha": "278a144006f49ae930c16d6fef712fe7f217f874",
+          "content_sha256": "ce6a099e66e6f84653ad630c509b810476f55fa851268e9f6d6e300938f2dd02",
+          "line_count": 541,
+          "symbols": [
+            "Olmo3RMSNorm",
+            "__init__",
+            "forward",
+            "extra_repr",
+            "repeat_kv",
+            "eager_attention_forward",
+            "apply_rotary_pos_emb",
+            "rotate_half",
+            "Olmo3Attention",
+            "Olmo3MLP",
+            "Olmo3DecoderLayer",
+            "Olmo3RotaryEmbedding",
+            "compute_default_rope_parameters",
+            "Olmo3PreTrainedModel",
+            "_init_weights",
+            "Olmo3Model",
+            "Olmo3ForCausalLM",
+            "Olmo3ForSequenceClassification"
+          ],
+          "excerpt": "class Olmo3RMSNorm(nn.Module):\n    def __init__(self, hidden_size, eps: float = 1e-6) -> None:\n        \"\"\"\n        Olmo3RMSNorm is equivalent to T5LayerNorm\n        \"\"\"\n        super().__init__()\n        self.weight = nn.Parameter(torch.ones(hidden_size))\n        self.variance_epsilon = eps\n\n    def forward(self, hidden_states) -> torch.Tensor:\n        input_dtype = hidden_states.dtype\n        hidden_states = hidden_states.to(torch.float32)\n        variance = hidden_states.pow(2).mean(-1, keepdim=True)\n        hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)\n        return (self.weight * hidden_states).to(input_dtype)\n\n    def extra_repr(self):\n        return f\"{tuple(self.weight.shape)}, eps={self.variance_epsilon}\"\n\n\ndef repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:\n    \"\"\"\n    This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,\n    num_key_value_heads, seqlen, head_dim) to (batch, num_attention_heads, seqlen, head_dim)\n    \"\"\"\n    batch, num_key_value_heads, slen, head_dim = hidden_states.shape\n    if n_rep == 1:\n        return hidden_states\n    hidden_states = hidden_states[:, :, None, :, :].expand(batch, num_key_value_heads, n_rep, slen, head_dim)\n    return hidden_states.reshape(batch, num_key_value_heads * n_rep, slen, head_dim)\n\n\ndef eager_attention_forward(\n    module: nn.Module,\n    query: torch.Tensor,\n    key: torch.Tensor,\n    value: torch.Tensor,\n    attention_mask: torch.Tensor | None,\n    scaling: float,\n    dropout: float = 0.0,\n    **kwargs: Unpack[TransformersKwargs],\n):\n    key_states = repeat_kv(key, module.num_key_value_groups)\n    value_states = repeat_kv(value, module.num_key_value_groups)\n\n    attn_weights = torch.matmul(query, key_states.transpose(2, 3)) * scaling\n    if attention_mask is not None:\n        attn_weights = attn_weights + attention_mask"
+        },
+        {
+          "path": "models/olmo3/modular_olmo3.py",
+          "url": "https://github.com/scv11/template-test-olmo3/blob/c8c0f9bab917ea963110fc4cd31cb238eb3bec20/models/olmo3/modular_olmo3.py",
+          "status": "added",
+          "additions": 320,
+          "deletions": 0,
+          "blob_sha": "f382f2bcda399def86653781c3cfa7ba78351f85",
+          "content_sha256": "527963a4f46145752ec6baf4a947365d0d74bff66a7119f27ad4a9854a1be040",
+          "line_count": 320,
+          "symbols": [
+            "Olmo3Config",
+            "__post_init__",
+            "convert_rope_params_to_dict",
+            "Olmo3RMSNorm",
+            "Olmo3Attention",
+            "__init__",
+            "forward",
+            "Olmo3DecoderLayer",
+            "Olmo3RotaryEmbedding",
+            "compute_default_rope_parameters",
+            "Olmo3PreTrainedModel",
+            "_init_weights",
+            "Olmo3Model",
+            "Olmo3ForCausalLM",
+            "Olmo3ForSequenceClassification"
+          ],
+          "excerpt": "class Olmo3Config(Olmo2Config):\n    r\"\"\"\n    Example:\n\n    ```python\n    >>> from transformers import Olmo3Model, Olmo3Config\n\n    >>> # Initializing a Olmo3 7B style configuration\n    >>> configuration = Olmo3Config()\n\n    >>> # Initializing a model from the Olmo3 7B style configuration\n    >>> model = Olmo3Model(configuration)\n\n    >>> # Accessing the model configuration\n    >>> configuration = model.config\n    ```\n    \"\"\"\n\n    model_type = \"olmo3\"\n    default_theta = 500000.0\n    keys_to_ignore_at_inference = [\"past_key_values\"]\n    base_model_tp_plan = {\n        \"layers.*.self_attn.q_proj\": \"colwise_gather_output\",  # we need to replicate here due to the added norm on q and k\n        \"layers.*.self_attn.k_proj\": \"colwise_gather_output\",  # we need to replicate here due to the added norm on q and k\n        \"layers.*.self_attn.v_proj\": \"colwise_gather_output\",  # we need to replicate here due to the added norm on q and k\n        \"layers.*.self_attn.o_proj\": \"rowwise_split_input\",  # input is replicated due to the added norm on q and k\n        \"layers.*.mlp.gate_proj\": \"colwise\",\n        \"layers.*.mlp.up_proj\": \"colwise\",\n        \"layers.*.mlp.down_proj\": \"rowwise\",\n    }\n    base_model_pp_plan = {\n        \"embed_tokens\": ([\"input_ids\"], [\"inputs_embeds\"]),\n        \"layers\": ([\"hidden_states\", \"attention_mask\"], [\"hidden_states\"]),\n        \"norm\": ([\"hidden_states\"], [\"hidden_states\"]),\n    }\n\n    sliding_window: int | None = 4096\n    layer_types: list[str] | None = None\n\n    def __post_init__(self, **kwargs):\n        if self.num_key_value_heads is None:\n            self.num_key_value_heads = self.num_attention_heads\n\n        if self.layer_types is None:\n            self.layer_types = [\n                \"sliding_attention\" if (i + 1) % 4 != 0 else \"full_attention\" for i in range(self.num_hidden_layers)\n            ]"
+        }
+      ],
+      "relations": [
+        {
+          "type": "proposal_issue",
+          "label": "Issue #3",
+          "url": "https://github.com/JT-Ushio/template-test/issues/3"
+        },
+        {
+          "type": "implementation_pr",
+          "label": "PR #5",
+          "url": "https://github.com/JT-Ushio/template-test/pull/5"
+        },
+        {
+          "type": "external_reference",
+          "label": "Reference 1",
+          "url": "https://arxiv.org/pdf/2501.00656"
+        },
+        {
+          "type": "external_reference",
+          "label": "Reference 2",
+          "url": "https://github.com/allenai/olmo"
+        },
+        {
+          "type": "external_reference",
+          "label": "Reference 3",
+          "url": "https://huggingface.co/allenai/OLMo-2-0425-1B"
+        }
+      ],
+      "warnings": [
+        "Temporary display alias: OLMo2 and OLMo3 are treated as one point for this overlay prototype.",
+        "External display fields replace local display fields; canonical identity and structural relations remain local.",
+        "Credential-bearing W&B query parameters were removed; the exposed token must be rotated at its source.",
+        "Submission metadata still names OLMo2 while the current PR head repository and synchronized code are OLMo3; both are retained under the temporary equivalence rule.",
+        "Unfilled benchmark placeholders were ignored and are not rendered as completed results."
+      ]
+    }
+  ],
+  "experiments": [
+    {
+      "id": "exp-template-test-olmo2-0425-1b",
+      "title": "OLMo-2 1B Base Architecture training record",
+      "title_zh": "OLMo-2 1B 基础架构训练记录",
+      "type": "training_reference",
+      "status": "completed",
+      "cursor_type": "wandb-final",
+      "covered_feature_ids": [
+        "feat-olmo3-standard"
+      ],
+      "primary_feature_ids": [
+        "feat-olmo3-standard"
+      ],
+      "summary": "Training summary adapted from the linked template-test PR; external claims remain attributed to that PR.",
+      "summary_zh": "由 template-test PR 的训练摘要适配而来；结果仍归因于外部提交，未自动升级为 InternSpace 的验证结论。",
+      "wandb_url": "https://wandb.ai/ai2-llm/olmo-small/reports/Training-Logs-of-OLMo2-0425-1B--VmlldzoxMjUzOTUxNA",
+      "final_metrics": {
+        "initial_training_loss": 10.42,
+        "final_training_loss": 3.18,
+        "final_validation_loss": 3.27,
+        "maximum_gradient_norm": 1.84,
+        "average_throughput": 38600,
+        "average_step_time": 1.72
+      },
+      "replay": {
+        "enabled": false,
+        "source": null,
+        "loss_trace": []
+      },
+      "evidence": [
+        {
+          "label": "template-test proposal",
+          "locator": "https://github.com/JT-Ushio/template-test/issues/3",
+          "summary": "Architecture proposal imported from template-test."
+        },
+        {
+          "label": "template-test implementation PR",
+          "locator": "https://github.com/JT-Ushio/template-test/pull/5",
+          "revision": "c8c0f9bab917ea963110fc4cd31cb238eb3bec20",
+          "summary": "Implementation and result claims imported from template-test."
+        }
+      ],
+      "replaces_experiment_id": "exp-olmo2-0425-1b-training-report",
+      "overlay_source_node_id": "template-test-olmo2-0425-1b"
+    }
+  ]
+}

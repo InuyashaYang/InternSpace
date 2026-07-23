@@ -22,7 +22,18 @@ export function compactFeatureTitle(feature, limit = NODE_TITLE_LIMIT) {
 export function matchesFeatureSearch(feature, query) {
   const term = String(query ?? "").trim().toLocaleLowerCase("zh-CN");
   if (!term) return false;
-  return [feature?.title_zh, feature?.title, feature?.summary_zh, feature?.summary, feature?.id, ...locatorSearchValues(feature)]
+  const overlay = feature?.template_overlay;
+  const overlayValues = overlay ? [
+    overlay.local?.title,
+    overlay.local?.title_zh,
+    overlay.local?.summary,
+    overlay.local?.summary_zh,
+    overlay.external?.external_architecture_id,
+    overlay.external?.hypothesis,
+    ...((overlay.external?.relations ?? []).flatMap((relation) => [relation.label, relation.url])),
+    ...((overlay.external?.implementation_files ?? []).flatMap((file) => [file.path, file.url])),
+  ] : [];
+  return [feature?.title_zh, feature?.title, feature?.summary_zh, feature?.summary, feature?.id, ...overlayValues, ...locatorSearchValues(feature)]
     .filter((value) => value != null && value !== "")
     .some((value) => String(value).toLocaleLowerCase("zh-CN").includes(term));
 }

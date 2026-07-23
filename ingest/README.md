@@ -53,3 +53,23 @@ The output is `ingest/proposals/concept-olmo-feature-tree.json`. It contains
 candidate Feature records plus boundary-confidence and commit-classification
 metadata. Validation temporarily combines only those Feature records with the
 canonical root; it never applies them to `data/feature-tree.json`.
+
+## template-test view overlay
+
+`scripts/build_template_test_overlay.py` reads the explicitly configured public
+Issue/PR pairs in `ingest/template-test-overlay.config.json`, extracts display
+metadata, model configuration, implementation files and W&B summary metrics,
+then writes a sanitized view-only overlay:
+
+```bash
+python3 scripts/build_template_test_overlay.py
+```
+
+The adapter never stores the raw Issue/PR body. W&B query strings and credential
+material are removed before JSON is written. `--fallback-existing` keeps the
+last checked-in safe snapshot when GitHub is temporarily unavailable.
+
+The Pages workflow refreshes this overlay hourly. External display fields may
+replace mapped local display fields, while local Feature identity, structural
+parentage and relations remain canonical. Details expose both identities and
+the temporary equivalence assumption.

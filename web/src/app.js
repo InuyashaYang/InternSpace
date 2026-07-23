@@ -4,6 +4,12 @@ import { featureValidation, primaryCodeHint, structuredCodeLocators } from "./fe
 import { ancestorIds, boundsForIds, layoutTree, visibleFeatureIds } from "./tree-layout.js";
 import { renderDetail } from "./detail-view.js";
 import { ExperimentReplayProvider } from "./telemetry.js";
+import {
+  TemplateOverlayDataError,
+  applyTemplateExperiments,
+  applyTemplateOverlay,
+  loadTemplateOverlay,
+} from "./template-overlay-adapter.js";
 import { exceedsPanThreshold, translatedViewport } from "./viewport-state.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -46,6 +52,7 @@ const elements = {
 const state = {
   tree: null,
   experimentIndex: null,
+  templateOverlay: null,
   layout: null,
   expanded: new Set(),
   selectedId: null,
@@ -145,17 +152,19 @@ function renderTree() {
     const children = state.tree.childrenById.get(id) ?? [];
     const dimmed = emphasized.size && !emphasized.has(id);
     const categoryDimmed = category !== "baseline" && !state.enabledCategories.has(category);
+    const hasTemplateOverlay = Boolean(feature.template_overlay);
     const group = svgElement("g", {
-      class: `feature-node category-${category} validation-${validation.key}${state.selectedId === id ? " is-selected" : ""}${dimmed ? " is-dimmed" : ""}${categoryDimmed ? " is-category-dimmed" : ""}`,
+      class: `feature-node category-${category} validation-${validation.key}${hasTemplateOverlay ? " is-template-overlay" : ""}${state.selectedId === id ? " is-selected" : ""}${dimmed ? " is-dimmed" : ""}${categoryDimmed ? " is-category-dimmed" : ""}`,
       transform: `translate(${point.x} ${point.y})`,
       tabindex: "0",
       role: "treeitem",
-      "aria-label": `${displayTitle}，${validation.label}${codeHint ? `，代码 ${codeHint}` : ""}`,
+      "aria-label": `${displayTitle}，${validation.label}${hasTemplateOverlay ? "，template-test 叠图节点" : ""}${codeHint ? `，代码 ${codeHint}` : ""}`,
       "aria-selected": state.selectedId === id ? "true" : "false",
       "aria-expanded": children.length ? String(state.expanded.has(id)) : "false",
       "data-feature-id": id,
       "data-validation": validation.key,
       "data-category": category,
+      "data-template-overlay": hasTemplateOverlay ? "true" : "false",
     });
     const card = svgElement("g", { class: "node-card" });
     card.append(svgElement("rect", { class: "node-panel", width: state.layout.config.nodeWidth, height: state.layout.config.nodeHeight, rx: 13 }));
@@ -166,6 +175,14 @@ function renderTree() {
     const subtitle = svgElement("text", { x: 16, y: 34, class: "node-subtitle" });
     subtitle.textContent = featureEnglishSubtitle(feature) || feature.id;
     card.append(subtitle);
+    if (hasTemplateOverlay) {
+      const overlayBadge = svgElement("g", { class: "node-overlay-badge", transform: "translate(166 7)" });
+      overlayBadge.append(svgElement("rect", { width: 39, height: 14, rx: 7 }));
+      const overlayLabel = svgElement("text", { x: 7, y: 10 });
+      overlayLabel.textContent = "DUAL";
+      overlayBadge.append(overlayLabel);
+      card.append(overlayBadge);
+    }
     const categoryWidth = Math.min(82, 18 + categoryMeta.label.length * 5.2);
     const categoryBadge = svgElement("g", { class: "node-badge category-badge", transform: "translate(16 42)" });
     categoryBadge.append(svgElement("rect", { width: categoryWidth, height: 15, rx: 7.5 }));
@@ -371,7 +388,7 @@ function experimentStatusSummary(experiments) {
 }
 
 function lossMetric(experiment) {
-  const value = Number(experiment?.final_metrics?.loss);
+  const value = Number(experiment?.final_metrics?.loss ?? experiment?.final_metrics?.final_training_loss);
   return Number.isFinite(value) ? value : null;
 }
 
@@ -489,9 +506,18 @@ function formalExperimentUrl() {
     : new URL("data/experiments.json", pageBase);
 }
 
+function templateOverlayUrl() {
+  const pageBase = new URL(".", document.baseURI);
+  return pageBase.pathname.endsWith("/web/")
+    ? new URL("../data/template-test-overlay.json", pageBase)
+    : new URL("data/template-test-overlay.json", pageBase);
+}
+
 function showError(error) {
   elements.empty.hidden = false;
-  elements.emptyMessage.textContent = error instanceof FeatureTreeDataError || error instanceof ExperimentIndexDataError
+  elements.emptyMessage.textContent = error instanceof FeatureTreeDataError
+    || error instanceof ExperimentIndexDataError
+    || error instanceof TemplateOverlayDataError
     ? [error.message, ...error.details].join("；")
     : error.message;
   elements.svg.classList.add("is-unavailable");
@@ -501,13 +527,23 @@ async function initialize() {
   elements.empty.hidden = true;
   elements.svg.classList.remove("is-unavailable");
   try {
-    state.tree = await loadFeatureTree(formalDataUrl());
-    state.experimentIndex = await loadExperimentIndex(formalExperimentUrl(), state.tree);
+    const canonicalTree = await loadFeatureTree(formalDataUrl());
+    const [canonicalExperiments, templateOverlay] = await Promise.all([
+      loadExperimentIndex(formalExperimentUrl(), canonicalTree),
+      loadTemplateOverlay(templateOverlayUrl(), canonicalTree),
+    ]);
+    state.templateOverlay = templateOverlay;
+    state.tree = applyTemplateOverlay(canonicalTree, templateOverlay);
+    state.experimentIndex = applyTemplateExperiments(canonicalExperiments, templateOverlay, state.tree);
     state.layout = layoutTree(state.tree);
     state.expanded = new Set([state.tree.rootId]);
     state.selectedId = state.tree.rootId;
     elements.svg.setAttribute("viewBox", `0 0 ${Math.max(state.layout.width, 1200)} ${Math.max(state.layout.height, 720)}`);
-    elements.detailContent.innerHTML = renderDetail(state.tree.byId.get(state.tree.rootId), state.tree, []);
+    elements.detailContent.innerHTML = renderDetail(
+      state.tree.byId.get(state.tree.rootId),
+      state.tree,
+      experimentsForFeature(state.tree.rootId),
+    );
     renderCanonicalStats();
     renderCategoryFilters();
     renderTree();
@@ -516,6 +552,7 @@ async function initialize() {
     document.documentElement.dataset.ready = "true";
     document.documentElement.dataset.featureCount = String(state.tree.features.length);
     document.documentElement.dataset.experimentCount = String(state.experimentIndex.experiments.length);
+    document.documentElement.dataset.templateOverlayCount = String(state.templateOverlay.nodes.length);
     document.documentElement.dataset.structuralEdgeCount = String(state.tree.features.length - 1);
     document.documentElement.dataset.auxiliaryEdgeCount = String(state.tree.features.reduce(
       (count, feature) => count + feature.depends_on.length + feature.related_to.length,

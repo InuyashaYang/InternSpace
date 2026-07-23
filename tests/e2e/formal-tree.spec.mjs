@@ -17,7 +17,9 @@ test("formal data renders one Feature-only root canvas", async ({ page }) => {
   const nodes = page.locator("#node-layer [data-feature-id]");
   await expect(nodes).toHaveCount(1 + firstLevel.length);
   await expect(page.locator(`[data-feature-id="${root.id}"]`)).toHaveAttribute("aria-selected", "true");
-  await expect(page.locator("#detail-panel h1")).toHaveText("OLMo-3 标准态");
+  await expect(page.locator("#detail-panel h1")).toHaveText("OLMo-2 1B 基础架构");
+  await expect(page.locator(`[data-feature-id="${root.id}"]`)).toHaveAttribute("data-template-overlay", "true");
+  await expect(page.locator(`[data-feature-id="${root.id}"] .node-overlay-badge`)).toHaveText("DUAL");
 
   const renderedIds = await nodes.evaluateAll((items) => items.map((item) => item.dataset.featureId));
   expect(renderedIds.every((id) => byId.get(id)?.record_type === "feature")).toBeTruthy();
