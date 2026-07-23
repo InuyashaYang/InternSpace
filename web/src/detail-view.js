@@ -171,6 +171,9 @@ function renderExperiments(experiments) {
     const rootReferenceNotice = experiment.type === "training_reference" && experiment.covered_feature_ids?.includes("feat-olmo3-standard")
       ? `<p class="experiment-notice">外部训练日志参考；不是 OLMo-3 标准态的 root provenance。</p>`
       : "";
+    const overlayNotice = experiment.template_overlay
+      ? `<p class="experiment-overlay-notice">TEMPLATE × LOCAL · 外部实验字段优先，本地覆盖关系与 evidence 已保留。</p>`
+      : "";
     return `
       <article class="experiment-card status-${escapeHtml(experiment.status)}">
         <div class="experiment-card-head">
@@ -182,12 +185,70 @@ function renderExperiments(experiments) {
         <div class="experiment-cursor"><span>光标类型</span><strong>${escapeHtml(cursor)}</strong></div>
         ${metrics}
         ${wandbUrl ? `<a class="wandb-link" href="${escapeHtml(wandbUrl)}" target="_blank" rel="noreferrer">打开 W&B run ↗</a>` : ""}
+        ${overlayNotice}
         ${rootReferenceNotice}
         ${covered}
       </article>
     `;
   }).join("");
   return htmlSection("实验覆盖 / W&B 与结果", `<div class="experiment-list">${content}</div>`, "detail-experiments");
+}
+
+function renderTemplateOverlay(feature) {
+  const overlay = feature.template_overlay;
+  if (!overlay?.external) return "";
+  const external = overlay.external;
+  const local = overlay.local ?? {};
+  const equivalence = external.temporary_equivalence ?? {};
+  const relations = (external.relations ?? []).map((relation) => {
+    const url = safeExternalUrl(relation.url);
+    return url
+      ? `<a class="overlay-relation" href="${escapeHtml(url)}" target="_blank" rel="noreferrer"><span>${escapeHtml(relation.type)}</span><strong>${escapeHtml(relation.label)}</strong></a>`
+      : "";
+  }).join("");
+  const commits = (external.commits ?? []).map((commit) => {
+    const url = safeExternalUrl(commit.url);
+    const content = `<code>${escapeHtml(commit.sha.slice(0, 12))}</code><strong>${escapeHtml(commit.message || "External commit")}</strong>${commit.authored_at ? `<small>${escapeHtml(commit.authored_at)}</small>` : ""}`;
+    return url ? `<a class="overlay-commit" href="${escapeHtml(url)}" target="_blank" rel="noreferrer">${content}</a>` : `<div class="overlay-commit">${content}</div>`;
+  }).join("");
+  const files = (external.implementation_files ?? []).map((file) => {
+    const url = safeExternalUrl(file.url);
+    const link = url
+      ? `<a href="${escapeHtml(url)}" target="_blank" rel="noreferrer"><code>${escapeHtml(file.path)}</code></a>`
+      : `<code>${escapeHtml(file.path)}</code>`;
+    const diff = file.additions != null || file.deletions != null
+      ? `<small>+${escapeHtml(file.additions ?? 0)} / −${escapeHtml(file.deletions ?? 0)} · ${escapeHtml(file.line_count ?? "?")} lines</small>`
+      : "";
+    const hashes = file.content_sha256
+      ? `<small>sha256 <code>${escapeHtml(file.content_sha256)}</code></small>`
+      : "";
+    const symbols = file.symbols?.length
+      ? `<div class="overlay-symbols">${file.symbols.map((symbol) => `<code>${escapeHtml(symbol)}</code>`).join("")}</div>`
+      : "";
+    const excerpt = file.excerpt
+      ? `<details class="overlay-code"><summary>查看同步的初始代码摘录</summary><pre><code>${escapeHtml(file.excerpt)}</code></pre></details>`
+      : "";
+    return `<article class="overlay-file">${link}${diff}${hashes}${symbols}${excerpt}</article>`;
+  }).join("");
+  const warnings = (external.warnings ?? []).length
+    ? `<ul class="overlay-warnings">${external.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>`
+    : "";
+  return htmlSection("Template-test 叠图 / 双重属性", `
+    <div class="overlay-identity-grid">
+      <article><span>外部显示属性 · 优先</span><strong>${escapeHtml(external.title)}</strong><code>${escapeHtml(external.external_architecture_id)}</code></article>
+      <article><span>InternSpace canonical · 保留</span><strong>${escapeHtml(local.title_zh || local.title)}</strong><code>${escapeHtml(local.id)}</code></article>
+    </div>
+    <div class="overlay-policy">
+      <span>${escapeHtml(external.merge_strategy)}</span>
+      <p>${escapeHtml(equivalence.assumption || "外部展示字段覆盖，本地 identity 与结构关系保留。")}</p>
+    </div>
+    ${external.hypothesis ? `<div class="overlay-block"><span>外部假设</span><p>${escapeHtml(external.hypothesis)}</p></div>` : ""}
+    ${Object.keys(external.model_configuration ?? {}).length ? `<div class="overlay-block"><span>外部模型配置</span>${renderValue(external.model_configuration)}</div>` : ""}
+    ${relations ? `<div class="overlay-block"><span>联合链接关系</span><div class="overlay-relations">${relations}</div></div>` : ""}
+    ${commits ? `<div class="overlay-block"><span>同步的 PR commits</span><div class="overlay-commits">${commits}</div></div>` : ""}
+    ${files ? `<div class="overlay-block"><span>同步的初始代码</span><div class="overlay-files">${files}</div></div>` : ""}
+    ${warnings}
+  `, "detail-template-overlay");
 }
 
 function renderRelations(feature, tree) {
@@ -241,6 +302,7 @@ export function renderDetail(feature, tree, experiments = []) {
       <code>${escapeHtml(feature.id)}</code>
     </div>
     ${section("一句话结构作用 / 摘要", featureSummary(feature), "detail-summary")}
+    ${renderTemplateOverlay(feature)}
     ${renderDelta(feature, parent)}
     ${renderConfiguration(feature)}
     ${renderLocators(feature)}

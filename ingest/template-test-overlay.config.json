@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "overlay_id": "template-test-overlay",
+  "source_repository": "JT-Ushio/template-test",
+  "submissions": [
+    {
+      "issue_number": 3,
+      "pull_request_number": 5,
+      "maps_to_feature_id": "feat-olmo3-standard",
+      "merge_strategy": "external-display-local-structure",
+      "temporary_equivalence": {
+        "external": "olmo2-0425-1b",
+        "local": "feat-olmo3-standard",
+        "assumption": "For the first overlay prototype, treat OLMo2-0425-1B and the OLMo-3 standard root as one display point. This is a visualization alias, not an architecture equivalence claim."
+      },
+      "title_zh": "OLMo-2 1B 基础架构",
+      "summary_zh": "来自 template-test Issue/PR 的 OLMo-2 1B 基础架构提交；在第一版叠图中临时覆盖根点显示，但保留 InternSpace 的 OLMo-3 身份与结构关系。",
+      "replaces_experiment_id": "exp-olmo2-0425-1b-training-report"
+    }
+  ]
+}

@@ -14,6 +14,13 @@ async function loadFeaturePayload(page, payload) {
   await page.route("**/data/feature-tree.json", (route) => route.fulfill({ json: payload }));
   await page.unroute("**/data/experiments.json").catch(() => {});
   await page.route("**/data/experiments.json", (route) => route.fulfill({ json: { experiments: [] } }));
+  await page.unroute("**/data/template-test-overlay.json").catch(() => {});
+  await page.route("**/data/template-test-overlay.json", (route) => route.fulfill({ json: {
+    overlay_id: "test-empty-overlay",
+    source_repository: "fixture/empty",
+    nodes: [],
+    experiments: [],
+  } }));
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-ready", "true");
 }
@@ -58,10 +65,21 @@ test("root state and adjudicated HLM branch", async ({ page }) => {
   const nodes = page.locator("[data-feature-id]");
   await expect(nodes).toHaveCount(5);
   await expect(page.locator('[data-feature-id="feat-olmo3-standard"]')).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('[data-feature-id="feat-olmo3-standard"] .node-title')).toHaveText("OLMo-2 1B 基础架构");
+  await expect(page.locator('[data-feature-id="feat-olmo3-standard"] .node-overlay-badge')).toHaveText("DUAL");
   await expect(page.locator('[data-feature-id="feat-olmo3-standard"] .node-exp-label')).toHaveText("EXP · W&B");
   await expect(page.locator('[data-feature-id="feat-olmo3-standard"] .node-exp-summary')).toContainText("W&B report");
   await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
   await page.locator('[data-feature-id="feat-olmo3-standard"]').click();
+  await expect(page.locator("#detail-panel")).toContainText("Template-test 叠图 / 双重属性");
+  await expect(page.locator("#detail-panel")).toContainText("OLMo-3 标准态");
+  await expect(page.locator("#detail-panel")).toContainText("Issue #3");
+  await expect(page.locator("#detail-panel")).toContainText("PR #5");
+  await expect(page.locator("#detail-panel")).toContainText("同步的 PR commits");
+  await expect(page.locator("#detail-panel")).toContainText("同步的初始代码");
+  await expect(page.locator("#detail-panel")).toContainText("sha256");
+  await expect(page.locator("#detail-panel")).toContainText("查看同步的初始代码摘录");
+  await expect(page.locator("#detail-panel")).toContainText("final_training_loss");
   await expect(page.locator("#detail-panel")).toContainText("外部训练日志参考；不是 OLMo-3 标准态的 root provenance。");
   await page.locator("#detail-close").click();
   await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
@@ -379,8 +397,8 @@ test("canonical stats and experiment cursors remain visibly separated and stoppa
   await expect(page.locator("#stat-validation")).toContainText("未验证");
   await expect(page.locator(".experiment-stats .stat-source")).toContainText("EXPERIMENTS");
   await expect(page.locator("#experiment-count")).toHaveText("2");
-  await expect(page.locator("#experiment-completed")).toHaveText("0");
-  await expect(page.locator("#experiment-final-loss")).toHaveText("—");
+  await expect(page.locator("#experiment-completed")).toHaveText("1");
+  await expect(page.locator("#experiment-final-loss")).toHaveText("3.180");
   await expect(page.locator("html")).toHaveAttribute("data-telemetry-source", "experiment-replay");
 
   const firstTick = Number(await page.locator("html").getAttribute("data-telemetry-tick"));

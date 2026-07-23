@@ -9,5 +9,7 @@ test("GitHub Pages /InternSpace/ base path loads modules and canonical data", as
   expect(resources).toContain("/InternSpace/src/app.js");
   expect(resources).toContain("/InternSpace/data/feature-tree.json");
   expect(resources).toContain("/InternSpace/data/experiments.json");
+  expect(resources).toContain("/InternSpace/data/template-test-overlay.json");
+  await expect(page.locator("html")).toHaveAttribute("data-template-overlay-count", "1");
   await expect(page.locator('[data-feature-id="feat-olmo3-standard"]')).toBeVisible();
 });
