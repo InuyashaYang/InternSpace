@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "database_id": "template-test-model-database",
+  "source_repository": "JT-Ushio/template-test",
+  "label": "architecture proposal",
+  "root_issue_number": 13,
+  "retained_issue_numbers": [21],
+  "title_zh_overrides": {
+    "13": "OLMo-3 标准架构",
+    "15": "深度注意力与 SiameseNorm",
+    "16": "MLA 与 MorphNorm",
+    "17": "空白测试分支",
+    "21": "LLaMA 测试分支"
+  },
+  "auxiliary_feature_root_id": "feat-olmo3-standard"
+}

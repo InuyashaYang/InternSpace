@@ -1,7 +1,10 @@
 # InternSpace
 
-从 `OLMo-3 标准态` 单一根点向外展开的 Feature 演进树。一个可见点就是一个 Feature；
-commit、Python symbol、实验和论文只作为详情或 evidence。
+以 Architecture Proposal Issue 为节点的 OLMo 模型谱系。Issue #13（OLMo-3）是根节点，
+`Parent issue` 决定父子关系；PR、W&B、commit 与代码文件在对应模型详情中展示。
+
+原有 11 个 canonical Feature 仍保留为辅助档案和实现证据，但不再进入主画布布局，也不再
+与 Issue 节点叠成第二套图。
 
 - 在线站点：<https://inuyashayang.github.io/InternSpace/>
 - 项目定义：[Project.md](Project.md)
@@ -9,17 +12,18 @@ commit、Python symbol、实验和论文只作为详情或 evidence。
 - 结构 Feature 边界：[STRUCTURAL_FEATURE_POLICY.md](STRUCTURAL_FEATURE_POLICY.md)
 - 贡献流程：[CONTRIBUTION_WORKFLOW.md](CONTRIBUTION_WORKFLOW.md)
 
-未来的新节点采用 Git review 驱动：贡献者提交独立 Feature 文件，CI 验证后由 Pull
-Request merge 接受，聚合树和静态页面随主分支自动更新。
+未来的新模型节点采用 GitHub Issue review 驱动：被接受的 Architecture Proposal Issue
+在数据库刷新后自动进入静态页面。Feature 文件继续用于维护辅助研究档案。
 
 结构、模型配置、训练配置、数据和运行时变化都可能构成节点。层数、hidden size、heads、
 batch、训练 token、GPU、并行和超参变化允许建点，但必须有明确 diff、位置和效果。
 
 ## 本地运行
 
-先验证一 Feature 一文件 source 与生成投影：
+刷新 Issue 模型数据库，并验证辅助 Feature source：
 
 ```bash
+GH_TOKEN="$(gh auth token)" python3 scripts/build_template_test_database.py --fallback-existing
 python3 scripts/build_feature_tree.py --check
 python3 scripts/validate_feature_tree.py
 ```
@@ -32,14 +36,14 @@ npm test --prefix web
 npm run serve --prefix web
 ```
 
-本地入口为 <http://127.0.0.1:4173/web/>。正式 source of truth 位于
-`features/*.json`；`data/feature-tree.json` 由
-`python3 scripts/build_feature_tree.py` 确定性生成，不手工维护。
+本地入口为 <http://127.0.0.1:4173/web/>。主图数据位于
+`data/template-test-data.json`；辅助 Feature 位于 `features/*.json`，并确定性生成
+`data/feature-tree.json`。
 
-## Experiment cursors
+## 辅助 Feature 与实验档案
 
 loss、W&B run 和训练状态属于实验记录，不属于单个 Feature 点。一个实验可以覆盖多个
-Feature；Feature 节点只显示它被哪些实验覆盖。
+Feature。当前主模型画布不渲染这些实验光标；它们作为历史辅助数据继续保留。
 
 - 已完成实验：展示 W&B URL、最终 loss 和其他 final metrics；
 - 正在展示的曲线：只能来自已抓取的 W&B loss trace 回放，并标为 `W&B replay`；
@@ -70,6 +74,8 @@ web/styles.css
 web/src/*.js
 data/feature-tree.json
 data/experiments.json
+data/template-test-data.json
+data/template-test-overlay.json
 ```
 
 不会上传 tests、evaluation、ingest、sources、features、schema、私有工作材料、Web 文档、
