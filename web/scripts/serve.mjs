@@ -57,6 +57,6 @@ createServer((request, response) => {
   response.on("close", () => stream.destroy());
   stream.pipe(response);
 }).listen(port, host, () => {
-  console.log(`InternSpace Feature Tree: http://${host}:${port}/web/`);
+  console.log(`InternSpace Model Lineage: http://${host}:${port}/web/`);
   console.log(`GitHub Pages smoke: http://${host}:${port}/InternSpace/`);
 });

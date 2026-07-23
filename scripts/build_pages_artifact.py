@@ -34,6 +34,7 @@ FIXED_RUNTIME_FILES = (
     Path("data/feature-tree.json"),
     Path("data/experiments.json"),
     Path("data/template-test-overlay.json"),
+    Path("data/template-test-data.json"),
 )
 BLOCKED_DIRECTORY_NAMES = {
     ".git",
@@ -77,6 +78,8 @@ JS_IMPORT = re.compile(
 DEFAULT_DATA_URL = re.compile(
     r"loadFeatureTree\s*\(\s*url\s*=\s*['\"]([^'\"]+feature-tree\.json)['\"]"
 )
+MODEL_DATA_URL = re.compile(r"template-test-data\.json")
+AUXILIARY_DATA_URL = re.compile(r"feature-tree\.json")
 
 
 class ArtifactError(ValueError):
@@ -218,15 +221,26 @@ def check_static_links(artifact_root: Path) -> tuple[Path, ...]:
     if overlay_target not in files:
         raise ArtifactError("default template overlay data URL does not resolve in artifact")
     checked.add(overlay_target)
+    model_adapter = (artifact_root / "web/src/model-data-adapter.js").read_text(encoding="utf-8")
+    if not MODEL_DATA_URL.search(model_adapter) or not AUXILIARY_DATA_URL.search(model_adapter):
+        raise ArtifactError("model adapter must load both the zip model database and auxiliary Feature archive")
+    model_target = Path("data/template-test-data.json")
+    if model_target not in files:
+        raise ArtifactError("default model database URL does not resolve in artifact")
+    checked.add(model_target)
 
     required = {
         Path("index.html"),
         Path("web/index.html"),
         Path("web/styles.css"),
         Path("web/src/app.js"),
+        Path("web/src/model-app.js"),
+        Path("web/src/model-data-adapter.js"),
+        Path("web/src/model-detail-view.js"),
         Path("data/feature-tree.json"),
         Path("data/experiments.json"),
         Path("data/template-test-overlay.json"),
+        Path("data/template-test-data.json"),
     }
     missing = sorted(required - files)
     if missing:

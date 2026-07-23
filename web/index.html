@@ -4,47 +4,40 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#070b14" />
-    <title>InternSpace · Feature Tree</title>
+    <title>InternSpace · Model Lineage</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main id="app-shell" class="app-shell" aria-label="InternSpace Feature Tree">
+    <main id="app-shell" class="app-shell" aria-label="InternSpace Model Lineage">
       <header class="topbar">
         <a class="brand" href="./" aria-label="InternSpace 首页">
           <span class="brand-mark" aria-hidden="true">⌘</span>
-          <span class="brand-copy"><strong>InternSpace</strong><small>OLMo-3 → Concept OLMo 结构 Feature 演进</small></span>
+          <span class="brand-copy"><strong>InternSpace</strong><small>Issue 驱动的模型谱系 · 离线快照</small></span>
         </a>
         <div class="search-wrap">
           <label class="search-box">
-            <span class="sr-only">搜索 Feature</span>
+            <span class="sr-only">搜索模型、Issue 或 PR</span>
             <svg aria-hidden="true" viewBox="0 0 20 20"><path d="m14.2 14.2 3.3 3.3m-1.8-8.3a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z"/></svg>
-            <input id="feature-search" type="search" placeholder="搜索标题、symbol、path…" autocomplete="off" />
+            <input id="model-search" type="search" placeholder="搜索模型、Issue、PR…" autocomplete="off" />
             <kbd>/</kbd>
           </label>
           <div id="search-results" class="search-results" hidden></div>
         </div>
         <div class="topbar-stats" aria-label="页面统计">
-          <section class="stat-group canonical-stats" aria-label="Canonical 真实统计">
-            <span class="stat-source">CANONICAL</span>
-            <div class="stat"><small>Feature</small><strong id="stat-features">—</strong></div>
-            <div class="stat"><small>Category</small><strong id="stat-categories">—</strong></div>
-            <div class="stat"><small>Code-pinned</small><strong id="stat-code-pinned">—</strong></div>
-            <div class="stat"><small>Validation</small><strong id="stat-validation">—</strong></div>
-          </section>
-          <section class="stat-group experiment-stats" aria-label="实验索引与 W&B 回放">
-            <span class="stat-source experiment-label">EXPERIMENTS</span>
-            <div class="stat"><small>Runs</small><strong id="experiment-count">—</strong></div>
-            <div class="stat"><small>Done</small><strong id="experiment-completed">—</strong></div>
-            <div class="stat"><small>Final loss</small><strong id="experiment-final-loss">—</strong></div>
-            <div class="stat"><small>Replay</small><strong id="experiment-replay">—</strong></div>
-            <button id="telemetry-toggle" type="button" class="telemetry-toggle" aria-pressed="true">W&B 回放 开</button>
+          <section class="stat-group canonical-stats" aria-label="离线快照统计">
+            <span class="stat-source">ZIP MODEL DATABASE</span>
+            <div class="stat"><small>Models</small><strong id="stat-models">—</strong></div>
+            <div class="stat"><small>Open issues</small><strong id="stat-open-issues">—</strong></div>
+            <div class="stat"><small>Pull requests</small><strong id="stat-pull-requests">—</strong></div>
+            <div class="stat"><small>Aux features</small><strong id="stat-auxiliary-features">—</strong></div>
+            <strong id="stat-parent-links" hidden>—</strong>
           </section>
         </div>
       </header>
 
-      <section class="tree-workspace" aria-label="Feature Tree 画布">
+      <section class="tree-workspace" aria-label="模型谱系画布">
         <div id="canvas-scroller" class="canvas-scroller">
-          <svg id="tree-canvas" role="tree" aria-label="Feature 演进树">
+          <svg id="tree-canvas" role="tree" aria-label="Issue 模型谱系">
             <defs>
               <linearGradient id="node-panel-gradient" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0" stop-color="#17233a" stop-opacity=".98" />
@@ -64,21 +57,21 @@
             </g>
           </svg>
           <div id="empty-state" class="empty-state" hidden>
-            <strong>Feature Tree 无法加载</strong>
+            <strong>模型谱系无法加载</strong>
             <p id="empty-message"></p>
             <button type="button" data-action="retry">重新加载</button>
           </div>
-          <div class="canvas-hint">单根 Feature Tree · 实验可覆盖多个 Feature · W&B 回放不是实时训练</div>
+          <div class="canvas-hint">主图仅显示 zip Issue 节点 · Parent issue 决定谱系 · PR / W&B / 代码在详情中</div>
         </div>
       </section>
 
-      <div class="bottom-legend" aria-label="Category 与关系图例">
+      <div class="bottom-legend" aria-label="节点类型与关系图例">
         <div id="category-filters" class="category-filters"></div>
         <div class="semantic-legend">
-          <span><i class="legend-dot unverified-dot"></i>未验证</span>
-          <span><i class="legend-dot conditional-dot"></i>条件性</span>
-          <span><i class="legend-line structural-line"></i>parent</span>
-          <span><i class="legend-line auxiliary-line"></i>related / depends</span>
+          <span><i class="legend-dot open-dot"></i>Open Issue</span>
+          <span><i class="legend-dot closed-dot"></i>Closed Issue</span>
+          <span><i class="legend-line structural-line"></i>Parent issue</span>
+          <span>原 Feature 仅作详情附录</span>
         </div>
       </div>
 
@@ -90,14 +83,14 @@
         <button type="button" data-action="fit" title="适配窗口" aria-label="适配">⊡</button>
       </div>
 
-      <aside id="detail-panel" class="detail-panel" aria-label="Feature 详情" aria-hidden="true">
+      <aside id="detail-panel" class="detail-panel" aria-label="模型、Issue 与 PR 详情" aria-hidden="true">
         <div class="drawer-topline">
-          <span>FEATURE EVIDENCE</span>
+          <span>MODEL · ISSUE · PULL REQUEST</span>
           <button id="detail-close" type="button" aria-label="关闭详情">×</button>
         </div>
-        <div id="detail-content" class="detail-content"><div class="detail-empty">选择一个 Feature 查看详情</div></div>
+        <div id="detail-content" class="detail-content"><div class="detail-empty">选择一个模型查看 Issue 与 PR</div></div>
       </aside>
     </main>
-    <script type="module" src="./src/app.js"></script>
+    <script type="module" src="./src/model-app.js"></script>
   </body>
 </html>

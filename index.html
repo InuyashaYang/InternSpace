@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f3f5f1" />
-    <meta http-equiv="refresh" content="6; url=./web/" />
-    <title>InternSpace · Feature Tree</title>
+    <meta http-equiv="refresh" content="1; url=./web/" />
+    <title>InternSpace · Model Lineage</title>
     <style>
       :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
       * { box-sizing: border-box; }
@@ -21,17 +21,17 @@
   </head>
   <body>
     <main>
-      <span class="label">Experiment cursors</span>
-      <h1>InternSpace Feature Tree</h1>
+      <span class="label">Issue-driven model database</span>
+      <h1>InternSpace Model Lineage</h1>
       <p>
-        loss、W&B run 和训练状态属于实验记录；一个实验可以覆盖多个 Feature。
-        已完成实验只展示 W&B 地址与最终指标，没有结果时不会补写假 loss。
+        主画布以 Architecture Proposal Issue 为模型节点，使用 Parent issue 构成谱系。
+        Pull Request、W&B、commit 与代码位置都保留在对应模型详情中。
       </p>
       <p>
-        页面中的曲线只表示已抓取 W&B trace 的回放，不表示训练正在实时运行。
+        InternSpace 原有 Feature 仅作为根模型的辅助档案，不再与模型 Issue 叠成第二张图。
       </p>
-      <a class="action" href="./web/">进入 Feature Tree</a>
-      <small>页面将在 6 秒后自动进入；如果没有跳转，请使用上方链接。</small>
+      <a class="action" href="./web/">进入模型谱系</a>
+      <small>页面将在 1 秒后自动进入；如果没有跳转，请使用上方链接。</small>
     </main>
   </body>
 </html>

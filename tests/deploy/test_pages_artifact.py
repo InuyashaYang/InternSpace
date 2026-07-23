@@ -49,15 +49,17 @@ class PagesArtifactTests(unittest.TestCase):
             self.assertEqual("/InternSpace/", PROJECT_BASE)
             self.assertIn(Path("web/index.html"), checked)
             self.assertIn(Path("web/styles.css"), checked)
-            self.assertIn(Path("web/src/app.js"), checked)
+            self.assertIn(Path("web/src/model-app.js"), checked)
+            self.assertIn(Path("web/src/model-data-adapter.js"), checked)
             self.assertIn(Path("data/feature-tree.json"), checked)
             self.assertIn(Path("data/experiments.json"), checked)
             self.assertIn(Path("data/template-test-overlay.json"), checked)
+            self.assertIn(Path("data/template-test-data.json"), checked)
 
-    def test_root_page_discloses_experiment_cursor_policy_before_entering_web_app(self) -> None:
+    def test_root_page_discloses_issue_graph_and_auxiliary_feature_policy(self) -> None:
         text = (REPO_ROOT / "index.html").read_text(encoding="utf-8")
-        self.assertIn("Experiment cursors", text)
-        self.assertIn("不会补写假 loss", text)
+        self.assertIn("Issue-driven model database", text)
+        self.assertIn("Feature 仅作为根模型的辅助档案", text)
         self.assertIn('href="./web/"', text)
         self.assertIn("url=./web/", text)
 
@@ -133,7 +135,7 @@ class PagesArtifactTests(unittest.TestCase):
         self.assertIn("scripts/build_feature_tree.py --check", text)
         self.assertIn("scripts/validate_feature_tree.py", text)
         self.assertIn("scripts/validate_experiments.py", text)
-        self.assertIn("scripts/build_template_test_overlay.py --fallback-existing", text)
+        self.assertIn("scripts/build_template_test_database.py --fallback-existing", text)
         self.assertIn('cron: "17 * * * *"', text)
         self.assertIn("npm test --prefix web", text)
         self.assertNotIn("concept_olmo", text)

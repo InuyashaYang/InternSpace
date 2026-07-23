@@ -1,8 +1,23 @@
-# InternSpace Feature Tree
+# InternSpace Model Lineage 与辅助 Feature 档案
 
-## 核心定义
+## 当前主视图：zip 模型数据库
 
-InternSpace 展示的不是模型组件图，也不是由多个根组成的研究森林。
+自 2026-07-24 起，Web 主画布以 `InternSpace.zip` 提供的 Architecture Proposal Issue
+数据库为准，而不是把外部 Issue 与本地 Feature 继续叠图：
+
+- 一个主画布节点对应一个合法 Architecture Proposal Issue；
+- 配置的 Issue #13（OLMo-3）是唯一根节点；
+- `Parent issue` 决定唯一结构父边；
+- PR、W&B、commit、代码文件与实验结论属于模型节点详情，不生成节点；
+- `data/feature-tree.json` 中的原有 Feature 继续作为受准入政策约束的辅助档案，但不进入主画布布局；
+- 新的已接受 Issue 可以由定时数据库构建任务同步后自动长出节点。
+
+下文的 Feature 定义、准入政策与 Git 驱动流程继续约束辅助 Feature 档案本身；其中把
+Feature Tree 描述为 Web 主画布的旧内容，以本节为准。
+
+## 辅助 Feature 档案的核心定义
+
+InternSpace 仍保留一套不是模型组件图、也不是多根研究森林的 Feature 档案。
 
 它是一棵只有一个根的 **Feature 演进树**：
 
@@ -158,7 +173,7 @@ description: ConceptLM V2.2 OLMo 7B training logic snapshot
 
 读取私有仓库时不得保存 GitHub token，不得把完整工作仓库复制进 InternSpace；优先记录 repository、immutable commit、commit-pinned path 和必要内容哈希。
 
-## 页面契约
+## 历史 Feature 页面契约（主视图已由上文替代）
 
 - 首屏就是树，不显示大幅介绍区。
 - 根点清晰但保持紧凑，子 Feature 从根向外展开。
@@ -175,7 +190,7 @@ description: ConceptLM V2.2 OLMo 7B training logic snapshot
 - 节点颜色只表达少量稳定状态，不为每种关系创造强颜色。
 - 大树必须使用确定性布局；更新数据后同一 Feature 不应无故跳位。
 
-### 外部模板叠图
+### 历史外部模板叠图（已停用）
 
 页面允许加载独立的、非 canonical 的外部 submission overlay。叠图不会修改
 `features/*.json` 或 `data/feature-tree.json`：

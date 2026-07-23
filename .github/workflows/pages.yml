@@ -42,10 +42,10 @@ jobs:
       - name: Install Web dependencies
         run: npm ci --prefix web
 
-      - name: Refresh public template-test overlay
+      - name: Refresh public model database
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python3 scripts/build_template_test_overlay.py --fallback-existing
+        run: python3 scripts/build_template_test_database.py --fallback-existing
 
       - name: Verify canonical projection and schema
         run: |
