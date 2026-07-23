@@ -145,6 +145,20 @@ export async function loadFeatureTree(url = "../data/feature-tree.json", fetchIm
 
 const EXPERIMENT_STATUSES = new Set(["planned", "running", "completed", "failed", "inconclusive", "archived"]);
 const EXPERIMENT_CURSOR_TYPES = new Set(["none", "wandb-final", "wandb-replay", "live"]);
+const WANDB_HOST = "wandb.ai";
+
+function safeWandbUrl(value) {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string") return "";
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" || url.username || url.password) return "";
+    if (url.hostname !== WANDB_HOST || url.search || url.hash) return "";
+    return url.href;
+  } catch {
+    return "";
+  }
+}
 
 function normalizeExperiment(experiment) {
   const covered = asArray(experiment?.covered_feature_ids).map(cleanReference).filter(Boolean);
@@ -161,7 +175,7 @@ function normalizeExperiment(experiment) {
     primary_feature_ids: Object.freeze(primary.length ? primary : covered),
     summary: String(experiment?.summary ?? ""),
     summary_zh: String(experiment?.summary_zh ?? ""),
-    wandb_url: experiment?.wandb_url ?? null,
+    wandb_url: safeWandbUrl(experiment?.wandb_url),
     final_metrics: experiment?.final_metrics && typeof experiment.final_metrics === "object" ? experiment.final_metrics : {},
     replay: experiment?.replay && typeof experiment.replay === "object" ? experiment.replay : {},
     evidence: asArray(experiment?.evidence),
@@ -186,11 +200,27 @@ export function normalizeExperimentIndex(payload, tree = null) {
     else byId.set(experiment.id, experiment);
     if (!EXPERIMENT_STATUSES.has(experiment.status)) errors.push(`${experiment.id} 的 status 无效: ${experiment.status}`);
     if (!EXPERIMENT_CURSOR_TYPES.has(experiment.cursor_type)) errors.push(`${experiment.id} 的 cursor_type 无效: ${experiment.cursor_type}`);
+    if (experiment.wandb_url === "") errors.push(`${experiment.id} 的 wandb_url 必须是无凭证、无 query/fragment 的 https://wandb.ai URL`);
+    if (["wandb-final", "wandb-replay"].includes(experiment.cursor_type) && !experiment.wandb_url) {
+      errors.push(`${experiment.id} 的 ${experiment.cursor_type} 需要 wandb_url`);
+    }
+    if (experiment.cursor_type === "wandb-replay") {
+      const trace = experiment.replay?.loss_trace;
+      if (experiment.replay?.enabled !== true || !Array.isArray(trace) || trace.length < 2) {
+        errors.push(`${experiment.id} 的 wandb-replay 需要启用 replay 并提供至少两个 loss_trace 点`);
+      }
+    } else if (experiment.replay?.enabled === true) {
+      errors.push(`${experiment.id} 只有 wandb-replay 可以启用 replay`);
+    }
     if (!experiment.covered_feature_ids.length) errors.push(`${experiment.id} 至少要覆盖一个 Feature`);
     for (const featureId of experiment.covered_feature_ids) {
       if (tree?.byId && !tree.byId.has(featureId)) errors.push(`${experiment.id} 覆盖的 Feature 不存在: ${featureId}`);
       if (!byFeatureId.has(featureId)) byFeatureId.set(featureId, []);
       byFeatureId.get(featureId).push(experiment);
+    }
+    for (const featureId of experiment.primary_feature_ids) {
+      if (tree?.byId && !tree.byId.has(featureId)) errors.push(`${experiment.id} 的 primary Feature 不存在: ${featureId}`);
+      if (!experiment.covered_feature_ids.includes(featureId)) errors.push(`${experiment.id} 的 primary Feature 必须同时出现在 covered_feature_ids: ${featureId}`);
     }
   }
 

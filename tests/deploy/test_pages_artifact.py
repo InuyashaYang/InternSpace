@@ -89,6 +89,16 @@ class PagesArtifactTests(unittest.TestCase):
             with self.assertRaisesRegex(ArtifactError, "DEMO telemetry"):
                 build_artifact(Path(directory) / "site", root)
 
+    def test_invalid_experiment_index_is_rejected_before_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = self.copy_public_sources(Path(directory) / "repo")
+            path = root / "data" / "experiments.json"
+            document = json.loads(path.read_text(encoding="utf-8"))
+            document["experiments"][0]["covered_feature_ids"] = ["feat-not-merged"]
+            path.write_text(json.dumps(document, ensure_ascii=False), encoding="utf-8")
+            with self.assertRaisesRegex(ArtifactError, "experiment index invalid"):
+                build_artifact(Path(directory) / "site", root)
+
     def test_broken_runtime_link_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = self.copy_public_sources(Path(directory) / "repo")
@@ -121,6 +131,7 @@ class PagesArtifactTests(unittest.TestCase):
         self.assertIn("actions/deploy-pages@v4", text)
         self.assertIn("scripts/build_feature_tree.py --check", text)
         self.assertIn("scripts/validate_feature_tree.py", text)
+        self.assertIn("scripts/validate_experiments.py", text)
         self.assertIn("npm test --prefix web", text)
         self.assertNotIn("concept_olmo", text)
         self.assertNotIn("secrets.", text)

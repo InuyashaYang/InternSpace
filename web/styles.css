@@ -118,6 +118,9 @@ button { color: inherit; }
 .node-toggle circle { fill: rgba(12, 20, 35, .94); stroke: rgba(128, 161, 190, .36); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .node-toggle text { fill: #b1c1d4; text-anchor: middle; font-size: 12px; font-weight: 650; }
 .node-exp-label { fill: #8fe6bf; font: 700 7px var(--mono); }
+.node-experiment.has-wandb .node-exp-label { fill: #d1fae5; stroke: rgba(7, 11, 20, .82); stroke-width: 2.4px; paint-order: stroke fill; }
+.node-experiment.has-wandb .node-exp-summary { fill: #c6f6df; }
+.node-experiment.has-wandb .node-progress-track { fill: rgba(52, 211, 153, .11); }
 .node-exp-summary { fill: #aebdd1; font: 8px var(--mono); }
 .node-sparkline { fill: none; stroke: #6ed6a1; stroke-width: 1; opacity: .72; vector-effect: non-scaling-stroke; }
 .node-progress-track { fill: rgba(255, 255, 255, .045); }
@@ -228,6 +231,7 @@ button { color: inherit; }
 .experiment-metrics dd { margin: 2px 0 0; }
 .experiment-metrics code { color: #e6edf7; font-size: 9px; }
 .wandb-link { display: inline-flex; margin-top: 9px; padding: 5px 8px; border: 1px solid rgba(52, 211, 153, .2); border-radius: 7px; background: rgba(52, 211, 153, .075); color: #a7f3d0; font-size: 9px; font-weight: 700; text-decoration: none; }
+.experiment-notice { padding: 7px 8px; border: 1px solid rgba(251, 191, 36, .24); border-radius: 8px; background: rgba(251, 191, 36, .07); color: #fde68a !important; }
 .experiment-covered { overflow-wrap: anywhere; }
 .experiment-covered code { display: inline-block; margin: 2px 3px 0 0; color: #8ab4d6; font-size: 7.5px; }
 .detail-provenance .fact-list { font-size: 9.5px; }

@@ -58,6 +58,12 @@ test("root state and adjudicated HLM branch", async ({ page }) => {
   const nodes = page.locator("[data-feature-id]");
   await expect(nodes).toHaveCount(5);
   await expect(page.locator('[data-feature-id="feat-olmo3-standard"]')).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator('[data-feature-id="feat-olmo3-standard"] .node-exp-label')).toHaveText("EXP · W&B");
+  await expect(page.locator('[data-feature-id="feat-olmo3-standard"] .node-exp-summary')).toContainText("W&B report");
+  await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
+  await page.locator('[data-feature-id="feat-olmo3-standard"]').click();
+  await expect(page.locator("#detail-panel")).toContainText("外部训练日志参考；不是 OLMo-3 标准态的 root provenance。");
+  await page.locator("#detail-close").click();
   await expect(page.locator("#detail-panel")).toHaveAttribute("aria-hidden", "true");
   const initialIds = await nodes.evaluateAll((items) => items.map((item) => item.dataset.featureId));
   expect(new Set(initialIds)).toEqual(new Set([

@@ -14,6 +14,13 @@ from pathlib import Path, PurePosixPath
 from typing import Iterable, Sequence
 from urllib.parse import urlsplit
 
+try:
+    from scripts.validate_experiments import DEFAULT_SCHEMA as DEFAULT_EXPERIMENT_SCHEMA
+    from scripts.validate_experiments import validate_files as validate_experiment_files
+except ModuleNotFoundError:  # pragma: no cover - direct script execution fallback
+    from validate_experiments import DEFAULT_SCHEMA as DEFAULT_EXPERIMENT_SCHEMA
+    from validate_experiments import validate_files as validate_experiment_files
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = Path(tempfile.gettempdir()) / "internspace-pages"
@@ -262,6 +269,14 @@ def build_artifact(output: Path, repo_root: Path = REPO_ROOT) -> tuple[Path, ...
         if not source.is_file() or source.is_symlink():
             raise ArtifactError(f"missing or unsafe runtime source: {relative}")
     reject_demo_telemetry_in_canonical(repo_root / "data" / "feature-tree.json")
+    experiment_issues = validate_experiment_files(
+        data_path=repo_root / "data" / "experiments.json",
+        schema_path=DEFAULT_EXPERIMENT_SCHEMA,
+        feature_tree_path=repo_root / "data" / "feature-tree.json",
+    )
+    if experiment_issues:
+        first = experiment_issues[0]
+        raise ArtifactError(f"experiment index invalid: {first.code} {first.path}: {first.message}")
 
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="internspace-pages-stage-", dir=output.parent) as stage_name:

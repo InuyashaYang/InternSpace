@@ -44,6 +44,7 @@ jobs:
         run: |
           python3 scripts/build_feature_tree.py --check
           python3 scripts/validate_feature_tree.py
+          python3 scripts/validate_experiments.py
           python3 -m unittest discover -s tests/model -p 'test_*.py'
 
       - name: Run Web Node tests
